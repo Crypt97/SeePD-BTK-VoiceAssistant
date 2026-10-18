@@ -1,0 +1,10 @@
+# Python build artifacts
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+
+# Local user configs & API keys (SOHA ne töltsd fel a privát kulcsodat!)
+config.json
+*.log

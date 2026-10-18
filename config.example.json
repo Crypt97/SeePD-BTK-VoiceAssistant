@@ -1,0 +1,15 @@
+{
+    "google_api_key": "",
+    "model_name": "gemini-3.1-flash-lite",
+    "hotkey": "f9",
+    "hotkey_mode": "toggle",
+    "audio_device_index": null,
+    "enable_clipboard": true,
+    "clipboard_template": "{codes}",
+    "enable_tts": true,
+    "tts_volume": 90,
+    "tts_rate": 180,
+    "enable_overlay": true,
+    "overlay_duration_sec": 10,
+    "ease_percent": 0
+}
