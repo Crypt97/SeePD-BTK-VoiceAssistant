@@ -33,11 +33,12 @@ jobs:
           python -m PyInstaller --noconsole --onefile --clean --name "SeePDBTKAssistant" --hidden-import="pynput.keyboard._win32" --hidden-import="pynput.mouse._win32" --hidden-import="pyttsx3.drivers" --hidden-import="pyttsx3.drivers.sapi5" --hidden-import="google.genai" --hidden-import="google.genai.types" --hidden-import="PyQt6.QtSvg" --add-data "btk_cache.json;." --exclude-module torch --exclude-module torchvision --exclude-module scipy --exclude-module pandas --exclude-module numba --exclude-module onnxruntime --exclude-module cv2 --exclude-module matplotlib main.py
 
       - name: Prepare artifact for SignPath
-        shell: bash
+        continue-on-error: true
+        shell: pwsh
         run: |
-          mkdir -p to_sign
-          cp dist/SeePDBTKAssistant.exe to_sign/
-          cd to_sign && zip -r ../SeePDBTKAssistant.zip SeePDBTKAssistant.exe
+          New-Item -ItemType Directory -Force -Path to_sign
+          Copy-Item dist/SeePDBTKAssistant.exe -Destination to_sign/
+          Compress-Archive -Path to_sign/SeePDBTKAssistant.exe -DestinationPath SeePDBTKAssistant.zip -Force
 
       - name: Submit to SignPath for Signing
         id: sign
@@ -53,14 +54,14 @@ jobs:
           output-artifact-directory: 'signed_output'
 
       - name: Pick binary to release
-        shell: bash
+        shell: pwsh
         run: |
-          if [ -f signed_output/SeePDBTKAssistant.exe ]; then
-            echo "Using signed binary..."
-            cp signed_output/SeePDBTKAssistant.exe dist/SeePDBTKAssistant.exe
-          else
-            echo "SignPath not ready or skipped, releasing build binary directly."
-          fi
+          if (Test-Path signed_output/SeePDBTKAssistant.exe) {
+            Write-Host "Using signed binary..."
+            Copy-Item signed_output/SeePDBTKAssistant.exe -Destination dist/SeePDBTKAssistant.exe -Force
+          } else {
+            Write-Host "SignPath not ready or skipped, releasing build binary directly."
+          }
 
       - name: Publish Release Assets
         uses: softprops/action-gh-release@v2
