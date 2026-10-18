@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QKeyEvent
 from audio_recorder import AudioRecorder
 
 if getattr(sys, 'frozen', False):
@@ -53,6 +54,163 @@ def save_config(cfg: dict):
             json.dump(cfg, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving config: {e}")
+
+class HotkeyRecorderButton(QPushButton):
+    hotkey_changed = pyqtSignal(str)
+
+    SPECIAL_KEYS_MAP = {
+        int(Qt.Key.Key_Insert): "insert",
+        int(Qt.Key.Key_Delete): "delete",
+        int(Qt.Key.Key_Home): "home",
+        int(Qt.Key.Key_End): "end",
+        int(Qt.Key.Key_PageUp): "page_up",
+        int(Qt.Key.Key_PageDown): "page_down",
+        int(Qt.Key.Key_Pause): "pause",
+        int(Qt.Key.Key_Print): "print_screen",
+        int(Qt.Key.Key_ScrollLock): "scroll_lock",
+        int(Qt.Key.Key_NumLock): "num_lock",
+        int(Qt.Key.Key_CapsLock): "caps_lock",
+        int(Qt.Key.Key_Tab): "tab",
+        int(Qt.Key.Key_Space): "space",
+        int(Qt.Key.Key_Backspace): "backspace",
+        int(Qt.Key.Key_Return): "enter",
+        int(Qt.Key.Key_Enter): "enter",
+        int(Qt.Key.Key_Up): "up",
+        int(Qt.Key.Key_Down): "down",
+        int(Qt.Key.Key_Left): "left",
+        int(Qt.Key.Key_Right): "right",
+    }
+
+    IGNORE_KEYS = {
+        int(Qt.Key.Key_Shift),
+        int(Qt.Key.Key_Control),
+        int(Qt.Key.Key_Alt),
+        int(Qt.Key.Key_Meta),
+    }
+
+    def __init__(self, key: str = "f9", parent=None):
+        super().__init__(parent)
+        self.current_key = (key or "f9").lower()
+        self.is_recording = False
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clicked.connect(self._toggle_recording)
+        self._update_appearance()
+
+    def _toggle_recording(self):
+        if not self.is_recording:
+            self.start_recording()
+        else:
+            self.cancel_recording()
+
+    def start_recording(self):
+        self.is_recording = True
+        self.setFocus()
+        self._update_appearance()
+
+    def cancel_recording(self):
+        self.is_recording = False
+        self._update_appearance()
+
+    def get_key(self) -> str:
+        return self.current_key
+
+    def set_key(self, key: str):
+        self.current_key = (key or "f9").lower()
+        self._update_appearance()
+
+    def _display_key(self) -> str:
+        return self.current_key.replace("_", " ").upper()
+
+    def _update_appearance(self):
+        if self.is_recording:
+            self.setText("[  Nyomj le egy gombot...  ]")
+            self.setStyleSheet("""
+                QPushButton {
+                    background-color: #0f172a;
+                    color: #38bdf8;
+                    border: 2px solid #0284c7;
+                    border-radius: 6px;
+                    padding: 7px 18px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    min-width: 170px;
+                }
+            """)
+            self.setToolTip("Nyomj le egy tetszőleges billentyűt a rögzítéshez (ESC: mégse).")
+        else:
+            self.setText(f"[  {self._display_key()}  ]")
+            self.setStyleSheet("""
+                QPushButton {
+                    background-color: #1e293b;
+                    color: #f8fafc;
+                    border: 1px solid #475569;
+                    border-radius: 6px;
+                    padding: 7px 18px;
+                    font-size: 13px;
+                    font-weight: bold;
+                    min-width: 170px;
+                }
+                QPushButton:hover {
+                    background-color: #334155;
+                    border-color: #64748b;
+                    color: #38bdf8;
+                }
+            """)
+            self.setToolTip("Kattints ide a gyorsbillentyű módosításához!")
+
+    def focusOutEvent(self, event):
+        if self.is_recording:
+            self.cancel_recording()
+        super().focusOutEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if not self.is_recording:
+            super().keyPressEvent(event)
+            return
+
+        if event.key() == Qt.Key.Key_Escape:
+            self.cancel_recording()
+            event.accept()
+            return
+
+        mapped_key = self._map_event_to_key(event)
+        if mapped_key:
+            self.current_key = mapped_key
+            self.is_recording = False
+            self._update_appearance()
+            self.hotkey_changed.emit(self.current_key)
+            event.accept()
+        else:
+            event.ignore()
+
+    def _map_event_to_key(self, event: QKeyEvent) -> str:
+        k_val = int(event.key())
+        if k_val in self.IGNORE_KEYS:
+            return ""
+
+        # Function keys F1..F24
+        if int(Qt.Key.Key_F1) <= k_val <= int(Qt.Key.Key_F24):
+            return f"f{k_val - int(Qt.Key.Key_F1) + 1}"
+
+        # Special named keys
+        if k_val in self.SPECIAL_KEYS_MAP:
+            return self.SPECIAL_KEYS_MAP[k_val]
+
+        # A-Z
+        if int(Qt.Key.Key_A) <= k_val <= int(Qt.Key.Key_Z):
+            return chr(ord('a') + (k_val - int(Qt.Key.Key_A)))
+
+        # 0-9
+        if int(Qt.Key.Key_0) <= k_val <= int(Qt.Key.Key_9):
+            return chr(ord('0') + (k_val - int(Qt.Key.Key_0)))
+
+        # Fallback to printable text
+        text = event.text().strip().lower()
+        if text and len(text) == 1:
+            return text
+
+        return ""
 
 class SettingsDialog(QDialog):
     settings_saved = pyqtSignal(dict)
@@ -131,16 +289,9 @@ class SettingsDialog(QDialog):
 
         hk_row = QHBoxLayout()
         hk_row.addWidget(QLabel("Hangrögzítés gombja (Voice):", hotkey_group))
-        self.combo_hotkey = QComboBox(hotkey_group)
-        self.combo_hotkey.addItems(["f9", "f8", "f10", "f11", "f12", "insert", "pause", "page_up", "page_down"])
-        current_hk = self.cfg.get("hotkey", "f9").lower()
-        idx = self.combo_hotkey.findText(current_hk)
-        if idx >= 0:
-            self.combo_hotkey.setCurrentIndex(idx)
-        else:
-            self.combo_hotkey.addItem(current_hk)
-            self.combo_hotkey.setCurrentText(current_hk)
-        hk_row.addWidget(self.combo_hotkey)
+        self.btn_hotkey = HotkeyRecorderButton(self.cfg.get("hotkey", "f9"), hotkey_group)
+        hk_row.addWidget(self.btn_hotkey)
+        hk_row.addStretch()
         hk_layout.addLayout(hk_row)
 
         hk_mode_row = QHBoxLayout()
@@ -157,17 +308,14 @@ class SettingsDialog(QDialog):
 
         hk_text_row = QHBoxLayout()
         hk_text_row.addWidget(QLabel("Szöveges bevitel gombja (Text):", hotkey_group))
-        self.combo_text_hotkey = QComboBox(hotkey_group)
-        self.combo_text_hotkey.addItems(["f10", "f9", "f8", "f11", "f12", "insert", "pause", "page_up", "page_down"])
-        current_text_hk = self.cfg.get("text_hotkey", "f10").lower()
-        idx_t = self.combo_text_hotkey.findText(current_text_hk)
-        if idx_t >= 0:
-            self.combo_text_hotkey.setCurrentIndex(idx_t)
-        else:
-            self.combo_text_hotkey.addItem(current_text_hk)
-            self.combo_text_hotkey.setCurrentText(current_text_hk)
-        hk_text_row.addWidget(self.combo_text_hotkey)
+        self.btn_text_hotkey = HotkeyRecorderButton(self.cfg.get("text_hotkey", "f10"), hotkey_group)
+        hk_text_row.addWidget(self.btn_text_hotkey)
+        hk_text_row.addStretch()
         hk_layout.addLayout(hk_text_row)
+
+        lbl_hint = QLabel("Tipp: Kattints a gombra, majd nyomd le a kívánt billentyűt a billentyűzeten.\nMégsem szeretnéd megváltoztatni? Nyomd meg az ESC billentyűt.", hotkey_group)
+        lbl_hint.setStyleSheet("color: #64748b; font-size: 11px; margin-top: 4px;")
+        hk_layout.addWidget(lbl_hint)
 
         input_layout.addWidget(hotkey_group)
 
@@ -298,9 +446,9 @@ class SettingsDialog(QDialog):
         self.cfg["google_api_key"] = self.input_api_key.text().strip()
         sel_model = self.combo_model.currentData()
         self.cfg["model_name"] = sel_model if sel_model else self.combo_model.currentText().strip()
-        self.cfg["hotkey"] = self.combo_hotkey.currentText().strip().lower()
+        self.cfg["hotkey"] = self.btn_hotkey.get_key()
         self.cfg["hotkey_mode"] = self.combo_hk_mode.currentData()
-        self.cfg["text_hotkey"] = self.combo_text_hotkey.currentText().strip().lower()
+        self.cfg["text_hotkey"] = self.btn_text_hotkey.get_key()
         self.cfg["audio_device_index"] = self.combo_mics.currentData()
         self.cfg["enable_clipboard"] = self.chk_clip.isChecked()
         self.cfg["enable_tts"] = self.chk_tts.isChecked()
