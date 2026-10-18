@@ -181,10 +181,20 @@ Válaszként kizárólag JSON-t adj vissza:
 BTK lista:
 {btk_context}
 """
-            res = self._client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
+            try:
+                res = self._client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+            except Exception as model_err:
+                if "404" in str(model_err) or "not found" in str(model_err).lower():
+                    logger.warning(f"Model {self.model_name} returned 404 for text, falling back to gemini-2.5-flash")
+                    res = self._client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                    )
+                else:
+                    raise model_err
             json_str = res.text.strip()
             if "```json" in json_str:
                 json_str = json_str.split("```json")[1].split("```")[0].strip()

@@ -4,14 +4,14 @@ A sleek, transparent, borderless always-on-top PyQt6 HUD overlay designed for Fi
 Uses crisp vector SVG icons from allsvgicons.com instead of emojis.
 """
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QPushButton, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from icons import (
     SVG_POLICE_BADGE, SVG_MIC, SVG_SPINNER, SVG_CHECK, SVG_CLIPBOARD, SVG_ALERT,
-    get_pixmap
+    SVG_KEYBOARD, get_pixmap, get_icon
 )
 
 def format_huf(val: int) -> str:
@@ -19,6 +19,7 @@ def format_huf(val: int) -> str:
 
 class InGameOverlay(QWidget):
     close_signal = pyqtSignal()
+    text_input_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -145,9 +146,27 @@ class InGameOverlay(QWidget):
             border: none;
         """)
         status_layout.addWidget(self.status_label)
-        header_layout.addWidget(status_frame, alignment=Qt.AlignmentFlag.AlignVCenter)
-
         header_layout.addStretch()
+
+        # Keyboard button for typing offenses directly
+        self.btn_open_text = QPushButton(self.card)
+        self.btn_open_text.setIcon(get_icon(SVG_KEYBOARD, 14))
+        self.btn_open_text.setFixedSize(24, 24)
+        self.btn_open_text.setToolTip("Szöveges szabálysértés beírása (F10)")
+        self.btn_open_text.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_open_text.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.06);
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: rgba(56, 189, 248, 0.25);
+            }
+        """)
+        self.btn_open_text.clicked.connect(self.text_input_clicked.emit)
+        header_layout.addWidget(self.btn_open_text, alignment=Qt.AlignmentFlag.AlignVCenter)
+
         card_layout.addLayout(header_layout)
 
         # Recognized transcription label

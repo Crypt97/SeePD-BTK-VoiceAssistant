@@ -126,11 +126,11 @@ class SettingsDialog(QDialog):
         input_layout = QVBoxLayout(tab_input)
         input_layout.setSpacing(12)
 
-        hotkey_group = QGroupBox("Gyorsbillentyű (Hotkey)", tab_input)
+        hotkey_group = QGroupBox("Gyorsbillentyűk (Hotkey)", tab_input)
         hk_layout = QVBoxLayout(hotkey_group)
 
         hk_row = QHBoxLayout()
-        hk_row.addWidget(QLabel("Működtető gomb:", hotkey_group))
+        hk_row.addWidget(QLabel("Hangrögzítés gombja (Voice):", hotkey_group))
         self.combo_hotkey = QComboBox(hotkey_group)
         self.combo_hotkey.addItems(["f9", "f8", "f10", "f11", "f12", "insert", "pause", "page_up", "page_down"])
         current_hk = self.cfg.get("hotkey", "f9").lower()
@@ -144,7 +144,7 @@ class SettingsDialog(QDialog):
         hk_layout.addLayout(hk_row)
 
         hk_mode_row = QHBoxLayout()
-        hk_mode_row.addWidget(QLabel("Működési mód:", hotkey_group))
+        hk_mode_row.addWidget(QLabel("Hangrögzítés módja:", hotkey_group))
         self.combo_hk_mode = QComboBox(hotkey_group)
         self.combo_hk_mode.addItem("Egyszer megnyomod: indul / újra megnyomod: leáll (Toggle)", "toggle")
         self.combo_hk_mode.addItem("Nyomva tartás alatt rögzít (Push-To-Talk)", "hold")
@@ -154,6 +154,20 @@ class SettingsDialog(QDialog):
             self.combo_hk_mode.setCurrentIndex(0)
         hk_mode_row.addWidget(self.combo_hk_mode)
         hk_layout.addLayout(hk_mode_row)
+
+        hk_text_row = QHBoxLayout()
+        hk_text_row.addWidget(QLabel("Szöveges bevitel gombja (Text):", hotkey_group))
+        self.combo_text_hotkey = QComboBox(hotkey_group)
+        self.combo_text_hotkey.addItems(["f10", "f9", "f8", "f11", "f12", "insert", "pause", "page_up", "page_down"])
+        current_text_hk = self.cfg.get("text_hotkey", "f10").lower()
+        idx_t = self.combo_text_hotkey.findText(current_text_hk)
+        if idx_t >= 0:
+            self.combo_text_hotkey.setCurrentIndex(idx_t)
+        else:
+            self.combo_text_hotkey.addItem(current_text_hk)
+            self.combo_text_hotkey.setCurrentText(current_text_hk)
+        hk_text_row.addWidget(self.combo_text_hotkey)
+        hk_layout.addLayout(hk_text_row)
 
         input_layout.addWidget(hotkey_group)
 
@@ -286,6 +300,7 @@ class SettingsDialog(QDialog):
         self.cfg["model_name"] = sel_model if sel_model else self.combo_model.currentText().strip()
         self.cfg["hotkey"] = self.combo_hotkey.currentText().strip().lower()
         self.cfg["hotkey_mode"] = self.combo_hk_mode.currentData()
+        self.cfg["text_hotkey"] = self.combo_text_hotkey.currentText().strip().lower()
         self.cfg["audio_device_index"] = self.combo_mics.currentData()
         self.cfg["enable_clipboard"] = self.chk_clip.isChecked()
         self.cfg["enable_tts"] = self.chk_tts.isChecked()

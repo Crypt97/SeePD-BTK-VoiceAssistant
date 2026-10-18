@@ -24,9 +24,10 @@ from audio_recorder import AudioRecorder
 from tts_service import TTSService
 from overlay import InGameOverlay
 from settings_dialog import SettingsDialog, load_config, save_config
+from text_input_dialog import QuickTextInputDialog
 from icons import (
     SVG_TRAY_BADGE, SVG_MIC, SVG_CHECK, SVG_SETTINGS, SVG_REFRESH, SVG_CLOSE,
-    get_icon
+    SVG_KEYBOARD, get_icon
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -37,6 +38,7 @@ class WorkerSignals(QObject):
     recording_stopped = pyqtSignal()
     analysis_done = pyqtSignal(dict, str)
     analysis_error = pyqtSignal(str)
+    open_text_input = pyqtSignal()
 
 class BTKVoiceApp:
     def __init__(self, app: QApplication):
@@ -62,6 +64,9 @@ class BTKVoiceApp:
         # UI Components
         self.overlay = InGameOverlay()
         self.settings_dlg = None
+        self.text_input_dlg = QuickTextInputDialog()
+        self.text_input_dlg.submitted.connect(self.process_text_input)
+        self.overlay.text_input_clicked.connect(self.open_text_input)
 
         # State
         self.is_recording = False
@@ -76,6 +81,7 @@ class BTKVoiceApp:
         self.signals.recording_stopped.connect(self._on_recording_stopped)
         self.signals.analysis_done.connect(self._on_analysis_done)
         self.signals.analysis_error.connect(self._on_analysis_error)
+        self.signals.open_text_input.connect(self.open_text_input)
 
         self._setup_tray()
         self._start_hotkey_listener()
@@ -87,13 +93,17 @@ class BTKVoiceApp:
     def _setup_tray(self):
         self.tray = QSystemTrayIcon(self.app)
         self.tray.setIcon(get_icon(SVG_TRAY_BADGE, 32))
-        self.tray.setToolTip(f"SeePD BTK Hangasszisztens ({self.cfg.get('hotkey', 'F9').upper()})")
+        self.tray.setToolTip(f"SeePD BTK Hangasszisztens ({self.cfg.get('hotkey', 'F9').upper()} / {self.cfg.get('text_hotkey', 'F10').upper()})")
 
         menu = QMenu()
 
         act_test = QAction(get_icon(SVG_MIC, 16), "Hangfelvétel indítása (Teszt)", menu)
         act_test.triggered.connect(self.toggle_recording)
         menu.addAction(act_test)
+
+        act_text = QAction(get_icon(SVG_KEYBOARD, 16), f"Szöveges bevitel ({self.cfg.get('text_hotkey', 'F10').upper()})", menu)
+        act_text.triggered.connect(self.open_text_input)
+        menu.addAction(act_text)
 
         act_hud_test = QAction(get_icon(SVG_CHECK, 16), "HUD teszt megjelenítése", menu)
         act_hud_test.triggered.connect(self._test_hud)
@@ -144,11 +154,11 @@ class BTKVoiceApp:
         self.cfg = new_cfg
         self.ai_analyzer.set_api_keys(
             self.cfg.get("google_api_key", ""),
-            model_name=self.cfg.get("model_name", "gemini-2.0-flash-lite")
+            model_name=self.cfg.get("model_name", "gemini-3.1-flash-lite")
         )
         self.tts.set_enabled(self.cfg.get("enable_tts", True))
         self.tts.set_volume(self.cfg.get("tts_volume", 90) / 100.0)
-        self.tray.setToolTip(f"SeePD BTK Hangasszisztens ({self.cfg.get('hotkey', 'F9').upper()})")
+        self.tray.setToolTip(f"SeePD BTK Hangasszisztens ({self.cfg.get('hotkey', 'F9').upper()} / {self.cfg.get('text_hotkey', 'F10').upper()})")
         # Restart hotkey listener if hotkey changed
         self._start_hotkey_listener()
 
@@ -160,6 +170,7 @@ class BTKVoiceApp:
                 pass
 
         target_key_str = self.cfg.get("hotkey", "f9").lower()
+        text_key_str = self.cfg.get("text_hotkey", "f10").lower()
         mode = self.cfg.get("hotkey_mode", "toggle")
 
         def get_key_name(key):
@@ -191,6 +202,9 @@ class BTKVoiceApp:
                     if not self.is_recording:
                         self.start_recording()
 
+            elif name == text_key_str:
+                self.signals.open_text_input.emit()
+
         def on_release(key):
             name = get_key_name(key)
             if name == target_key_str:
@@ -202,7 +216,7 @@ class BTKVoiceApp:
         self._hotkey_listener = keyboard.Listener(on_press=on_press, on_release=on_release)
         self._hotkey_listener.daemon = True
         self._hotkey_listener.start()
-        logger.info(f"Hotkey listener started on key: {target_key_str} (mode: {mode})")
+        logger.info(f"Hotkey listener started on key: {target_key_str} (mode: {mode}), text key: {text_key_str}")
 
     def toggle_recording(self):
         if not self.is_recording:
@@ -257,6 +271,44 @@ class BTKVoiceApp:
             if req_id == self._request_counter:
                 logger.error(f"Error in _process_worker: {e}", exc_info=True)
                 self.signals.analysis_error.emit(f"Hiba a feldolgozás során: {e}")
+
+    def open_text_input(self):
+        self.text_input_dlg.show_and_focus()
+
+    def process_text_input(self, text: str):
+        if not text:
+            return
+        self._request_counter += 1
+        req_id = self._request_counter
+
+        # Show HUD in processing state
+        if self.cfg.get("enable_overlay", True):
+            self.overlay.set_recording_state(False)
+            self.overlay.show()
+
+        threading.Thread(target=self._process_text_worker, args=(text, req_id), daemon=True).start()
+
+    def _process_text_worker(self, text: str, req_id: int):
+        try:
+            res = self.ai_analyzer.analyze_text_direct(text)
+            if req_id != self._request_counter:
+                logger.info(f"Discarding stale text response (req_id {req_id} != {self._request_counter})")
+                return
+
+            if "error" in res and res["error"]:
+                self.signals.analysis_error.emit(res["error"])
+                return
+
+            transcription = res.get("transcription", text)
+            offenses = res.get("offenses", [])
+            ease_p = self.cfg.get("ease_percent", 0)
+
+            calc_result = self.calculator.calculate(offenses, ease_percent=ease_p)
+            self.signals.analysis_done.emit(calc_result, transcription)
+        except Exception as e:
+            if req_id == self._request_counter:
+                logger.error(f"Error in _process_text_worker: {e}", exc_info=True)
+                self.signals.analysis_error.emit(f"Hiba a szöveg feldolgozása során: {e}")
 
     def _on_recording_started(self):
         if self.cfg.get("enable_overlay", True):

@@ -3,6 +3,7 @@
     "model_name": "gemini-3.1-flash-lite",
     "hotkey": "f9",
     "hotkey_mode": "toggle",
+    "text_hotkey": "f10",
     "audio_device_index": null,
     "enable_clipboard": true,
     "clipboard_template": "{codes}",
