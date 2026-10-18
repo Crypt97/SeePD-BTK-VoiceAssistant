@@ -30,7 +30,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          python -m PyInstaller --noconsole --onefile --clean --name "SeePDBTKAssistant" --hidden-import="pynput.keyboard._win32" --hidden-import="pynput.mouse._win32" --hidden-import="pyttsx3.drivers" --hidden-import="pyttsx3.drivers.sapi5" --hidden-import="google.genai" --hidden-import="google.genai.types" --hidden-import="PyQt6.QtSvg" --add-data "btk_cache.json;." main.py
+          python -m PyInstaller --noconsole --onefile --clean --name "SeePDBTKAssistant" --hidden-import="pynput.keyboard._win32" --hidden-import="pynput.mouse._win32" --hidden-import="pyttsx3.drivers" --hidden-import="pyttsx3.drivers.sapi5" --hidden-import="google.genai" --hidden-import="google.genai.types" --hidden-import="PyQt6.QtSvg" --add-data "btk_cache.json;." --exclude-module torch --exclude-module torchvision --exclude-module scipy --exclude-module pandas --exclude-module numba --exclude-module onnxruntime --exclude-module cv2 --exclude-module matplotlib main.py
 
       - name: Prepare artifact for SignPath
         shell: bash
@@ -52,10 +52,22 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: 'signed_output'
 
+      - name: Pick binary to release
+        shell: bash
+        run: |
+          if [ -f signed_output/SeePDBTKAssistant.exe ]; then
+            echo "Using signed binary..."
+            cp signed_output/SeePDBTKAssistant.exe dist/SeePDBTKAssistant.exe
+          else
+            echo "SignPath not ready or skipped, releasing build binary directly."
+          fi
+
       - name: Publish Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          name: SeePD BTK Assistant ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
             dist/SeePDBTKAssistant.exe
             config.example.json
