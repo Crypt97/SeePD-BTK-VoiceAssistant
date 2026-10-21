@@ -38,7 +38,7 @@ class AIAnalyzer:
         if "403" in err_str or "PERMISSION_DENIED" in err_str or "SERVICE_DISABLED" in err_str or "has not been used in project" in err_str:
             return (
                 "A Gemini API nincs engedélyezve ehhez a projekthez!\n"
-                "Kérj új ingyenes kulcsot az aistudio.google.com oldalon a 'Create API key in new project' opcióval."
+                "Kérj új ingyenes kulcsot az aistudio.google.com oldalon a '+ Create project' opcióval."
             )
         if "400" in err_str and ("API_KEY_INVALID" in err_str or "key not valid" in err_str.lower()):
             return "Érvénytelen Gemini API kulcs! Kérlek ellenőrizd a Beállításokban."
