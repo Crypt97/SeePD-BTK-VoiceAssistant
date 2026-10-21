@@ -146,6 +146,7 @@ class InGameOverlay(QWidget):
             border: none;
         """)
         status_layout.addWidget(self.status_label)
+        header_layout.addWidget(status_frame, alignment=Qt.AlignmentFlag.AlignVCenter)
         header_layout.addStretch()
 
         # Keyboard button for typing offenses directly
