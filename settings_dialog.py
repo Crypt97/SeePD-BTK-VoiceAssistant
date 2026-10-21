@@ -260,6 +260,7 @@ class SettingsDialog(QDialog):
         self.combo_model.addItem("Gemini 2.0 Flash-Lite (Villámgyors)", "gemini-2.0-flash-lite")
         self.combo_model.addItem("Gemini 2.5 Flash (Kiegyensúlyozott)", "gemini-2.5-flash")
         self.combo_model.addItem("Gemini 2.0 Flash", "gemini-2.0-flash")
+        self.combo_model.addItem("Gemma 4 26B (Google Open Weights)", "gemma-4-26b-a4b-it")
         cur_model = self.cfg.get("model_name", "gemini-3.1-flash-lite")
         found = False
         for i in range(self.combo_model.count()):

@@ -135,8 +135,9 @@ Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd!
                     ]
                 )
             except Exception as model_err:
-                if "404" in str(model_err) or "not found" in str(model_err).lower():
-                    logger.warning(f"Model {self.model_name} returned 404, fallback to gemini-2.5-flash: {model_err}")
+                err_lower = str(model_err).lower()
+                if "404" in str(model_err) or "not found" in err_lower or "modality" in err_lower or "audio" in err_lower or "gemma" in self.model_name.lower():
+                    logger.warning(f"Model {self.model_name} cannot process audio directly, falling back to gemini-2.5-flash: {model_err}")
                     response = self._client.models.generate_content(
                         model="gemini-2.5-flash",
                         contents=[
