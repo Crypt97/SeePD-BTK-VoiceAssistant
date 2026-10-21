@@ -33,6 +33,32 @@ class AIAnalyzer:
             self.model_name = model_name
         self._init_client()
 
+    def _format_ai_error(self, e: Exception) -> str:
+        err_str = str(e)
+        if "403" in err_str or "PERMISSION_DENIED" in err_str or "SERVICE_DISABLED" in err_str or "has not been used in project" in err_str:
+            return (
+                "A Gemini API nincs engedélyezve ehhez a projekthez!\n"
+                "Kérj új ingyenes kulcsot az aistudio.google.com oldalon a 'Create API key in new project' opcióval."
+            )
+        if "400" in err_str and ("API_KEY_INVALID" in err_str or "key not valid" in err_str.lower()):
+            return "Érvénytelen Gemini API kulcs! Kérlek ellenőrizd a Beállításokban."
+        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+            return "API kérésszám limit (429)! Kérlek várj pár másodpercet."
+        if "404" in err_str:
+            return f"A kiválasztott modell ({self.model_name}) nem elérhető. Válts a Beállításokban a Flash modellre!"
+        
+        # If raw JSON was included in error, simplify it
+        if "{'error'" in err_str:
+            prefix = err_str.split("{'error'")[0].strip()
+            if prefix:
+                return f"AI hiba: {prefix}"
+        if '{"error"' in err_str:
+            prefix = err_str.split('{"error"')[0].strip()
+            if prefix:
+                return f"AI hiba: {prefix}"
+
+        return f"AI hiba: {err_str}"
+
     def analyze_audio(self, wav_bytes: bytes) -> Dict[str, Any]:
         """
         Analyzes audio bytes directly using Google Gemini API.
@@ -152,7 +178,7 @@ Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd!
         except Exception as e:
             logger.error(f"Error in Gemini AI analysis: {e}")
             return {
-                "error": f"AI hiba: {str(e)}",
+                "error": self._format_ai_error(e),
                 "transcription": "",
                 "offenses": []
             }
@@ -215,4 +241,5 @@ BTK lista:
                 "offenses": unique_offenses
             }
         except Exception as e:
-            return {"error": str(e), "offenses": []}
+            logger.error(f"Error in Gemini text analysis: {e}")
+            return {"error": self._format_ai_error(e), "offenses": []}
