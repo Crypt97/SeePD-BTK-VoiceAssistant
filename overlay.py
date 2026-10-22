@@ -226,6 +226,17 @@ class InGameOverlay(QWidget):
         jail_box.addWidget(self.jail_val)
         stats_layout.addLayout(jail_box)
 
+        # Bail box (Óvadék)
+        bail_box = QVBoxLayout()
+        bail_box.setSpacing(2)
+        bail_title = QLabel("Óvadék", self.stats_frame)
+        bail_title.setStyleSheet("font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; border: none;")
+        self.bail_val = QLabel("-", self.stats_frame)
+        self.bail_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #cbd5e1; border: none;")
+        bail_box.addWidget(bail_title)
+        bail_box.addWidget(self.bail_val)
+        stats_layout.addLayout(bail_box)
+
         # Docs box
         docs_box = QVBoxLayout()
         docs_box.setSpacing(2)
@@ -344,6 +355,16 @@ class InGameOverlay(QWidget):
             self.jail_val.setText(f"{j_min} perc" if j_min > 0 else "0 perc")
         else:
             self.jail_val.setText(f"{j_min} - {j_max} perc")
+
+        # Bail status (Óvadék)
+        bail = calculation_data.get("bail_status", "-")
+        self.bail_val.setText(bail)
+        if bail in ("Jár", "Van"):
+            self.bail_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #10b981; border: none;")
+        elif bail in ("Nem", "Nem adható"):
+            self.bail_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #ef4444; border: none;")
+        else:
+            self.bail_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b; border: none;")
 
         dl = calculation_data.get("revoke_dl", "Nem")
         self.docs_val.setText(dl)

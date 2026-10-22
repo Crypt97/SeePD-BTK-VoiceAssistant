@@ -114,10 +114,10 @@ class BTKCalculator:
             eased_j_min, eased_j_max = jail_min, jail_max
 
         # Óvadék
-        if not has_jail:
-            bail_status = "Nincs (nincs börtön)"
+        if not has_jail or eased_j_max == 0:
+            bail_status = "-"
         elif any_no_bail:
-            bail_status = "Nem adható"
+            bail_status = "Nem"
         else:
             bail_status = "Jár"
 
@@ -142,6 +142,10 @@ class BTKCalculator:
             parts = [f"Felismerve: {names_str}."]
             if jail_spoken:
                 parts.append(f"{fine_spoken} és {jail_spoken}.")
+                if any_no_bail:
+                    parts.append("Óvadék nem adható.")
+                else:
+                    parts.append("Óvadék jár.")
             else:
                 parts.append(f"{fine_spoken}.")
 
