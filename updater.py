@@ -23,7 +23,7 @@ from icons import get_app_icon, get_app_pixmap
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.7"
+APP_VERSION = "1.0.8"
 GITHUB_REPO = "Crypt97/SeePD-BTK-VoiceAssistant"
 GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
@@ -317,9 +317,12 @@ class UpdateDialog(QDialog):
     def apply_update_and_restart(self, new_exe_temp: str):
         current_exe = sys.executable
         current_pid = os.getpid()
+        exe_dir = os.path.dirname(current_exe)
 
-        # Generate lightweight self-replacing batch script in temp dir
+        # Clear PyInstaller's _MEIPASS2 environment variable so the newly launched onefile exe extracts properly
         bat_content = f"""@echo off
+set _MEIPASS2=
+set _MEIPASS=
 timeout /t 1 /nobreak >nul
 :wait_process
 tasklist /fi "PID eq {current_pid}" 2>nul | find "{current_pid}" >nul
@@ -336,6 +339,9 @@ if exist "{current_exe}" (
 )
 
 move /y "{new_exe_temp}" "{current_exe}" >nul
+cd /d "{exe_dir}"
+set _MEIPASS2=
+set _MEIPASS=
 start "" "{current_exe}"
 del "%~f0" >nul 2>&1
 """
@@ -343,9 +349,14 @@ del "%~f0" >nul 2>&1
         with open(bat_path, "w", encoding="utf-8") as f:
             f.write(bat_content)
 
+        clean_env = os.environ.copy()
+        clean_env.pop("_MEIPASS2", None)
+        clean_env.pop("_MEIPASS", None)
+
         # Launch batch script hidden / independent of python process
         subprocess.Popen(
             ["cmd.exe", "/c", bat_path],
+            env=clean_env,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         )
         sys.exit(0)
