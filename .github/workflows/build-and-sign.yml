@@ -63,6 +63,12 @@ jobs:
             Write-Host "SignPath not ready or skipped, releasing build binary directly."
           }
 
+      - name: Build Windows Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
       - name: Publish Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,5 +76,6 @@ jobs:
           name: SeePD BTK Assistant ${{ github.ref_name }}
           generate_release_notes: true
           files: |
+            installer_dist/SeePDBTKAssistant-Setup.exe
             dist/SeePDBTKAssistant.exe
             config.example.json

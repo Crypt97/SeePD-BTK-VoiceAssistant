@@ -23,7 +23,7 @@ from icons import get_app_icon, get_app_pixmap
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.13"
+APP_VERSION = "1.0.14"
 GITHUB_REPO = "Crypt97/SeePD-BTK-VoiceAssistant"
 GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
@@ -55,23 +55,34 @@ def check_for_updates_sync() -> Dict[str, Any]:
                 remote_ver = parse_version(tag_name)
                 local_ver = parse_version(APP_VERSION)
 
+                setup_url = None
+                setup_size = 0
                 exe_url = None
                 exe_size = 0
                 for asset in data.get("assets", []):
-                    if asset.get("name") == "SeePDBTKAssistant.exe":
+                    name = asset.get("name", "")
+                    if name == "SeePDBTKAssistant-Setup.exe":
+                        setup_url = asset.get("browser_download_url")
+                        setup_size = asset.get("size", 0)
+                    elif name == "SeePDBTKAssistant.exe":
                         exe_url = asset.get("browser_download_url")
                         exe_size = asset.get("size", 0)
-                        break
 
-                update_available = remote_ver > local_ver and exe_url is not None
+                # Prefer official installer if available
+                is_setup = setup_url is not None
+                chosen_url = setup_url if is_setup else exe_url
+                chosen_size = setup_size if is_setup else exe_size
+
+                update_available = remote_ver > local_ver and chosen_url is not None
 
                 return {
                     "success": True,
                     "update_available": update_available,
                     "latest_version": tag_name,
                     "current_version": f"v{APP_VERSION}",
-                    "download_url": exe_url,
-                    "size_bytes": exe_size,
+                    "download_url": chosen_url,
+                    "size_bytes": chosen_size,
+                    "is_setup": is_setup,
                     "release_notes": data.get("body", ""),
                     "release_url": data.get("html_url", "")
                 }
@@ -275,10 +286,14 @@ class UpdateDialog(QDialog):
         self.lbl_status.show()
         self.lbl_status.setText("Letöltés előkészítése...")
 
-        # Temp destination path next to current exe
-        current_exe = sys.executable
-        exe_dir = os.path.dirname(current_exe)
-        self.temp_exe_path = os.path.join(exe_dir, "SeePDBTKAssistant.update.tmp")
+        # Determine destination path
+        if self.update_info.get("is_setup"):
+            temp_dir = tempfile.gettempdir()
+            self.temp_exe_path = os.path.join(temp_dir, f"SeePDBTKAssistant-Setup-{self.update_info.get('latest_version')}.exe")
+        else:
+            current_exe = sys.executable
+            exe_dir = os.path.dirname(current_exe)
+            self.temp_exe_path = os.path.join(exe_dir, "SeePDBTKAssistant.update.tmp")
 
         self.download_worker = DownloadWorker(self.update_info["download_url"], self.temp_exe_path)
         self.download_worker.progress.connect(self._on_progress)
@@ -315,6 +330,31 @@ class UpdateDialog(QDialog):
         super().closeEvent(event)
 
     def apply_update_and_restart(self, new_exe_temp: str):
+        clean_env = os.environ.copy()
+        clean_env.pop("_MEIPASS2", None)
+        clean_env.pop("_MEIPASS", None)
+
+        creation_flags = 0
+        if sys.platform == "win32":
+            creation_flags = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+
+        # If downloaded asset is the Inno Setup installer, run silent background upgrade!
+        if self.update_info.get("is_setup"):
+            subprocess.Popen(
+                [new_exe_temp, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/FORCECLOSEAPPLICATIONS"],
+                env=clean_env,
+                creationflags=creation_flags
+            )
+            try:
+                from PyQt6.QtWidgets import QApplication
+                app = QApplication.instance()
+                if app:
+                    app.quit()
+            except Exception:
+                pass
+            os._exit(0)
+
+        # Fallback for standalone/portable .exe replacement
         current_exe = os.path.abspath(sys.executable)
         current_pid = os.getpid()
         exe_dir = os.path.dirname(current_exe)
