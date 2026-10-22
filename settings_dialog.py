@@ -1,15 +1,15 @@
 """
 SeeRPG Settings Dialog
-A modern, dark-themed PyQt6 settings window for configuring Hotkeys, API keys, Audio devices, and Outputs.
-Styled to match the sleek in-game HUD aesthetic.
+A modern, dark-themed PyQt6 settings window with custom segmented pill navigation,
+sleek cards, and flawless border alignment matching FiveM / GTA V HUD aesthetics.
 """
 import os
 import sys
 import json
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QComboBox, QCheckBox, QSlider, QSpinBox, QTabWidget, QWidget,
-    QGroupBox, QMessageBox, QFrame
+    QComboBox, QCheckBox, QSlider, QSpinBox, QWidget,
+    QGroupBox, QMessageBox, QFrame, QStackedWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent
@@ -224,9 +224,10 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.btk_service = btk_service
         self.cfg = load_config()
+        self.nav_buttons = []
         self.setWindowIcon(get_app_icon())
         self.setWindowTitle("SeePD BTK Asszisztens - Beállítások")
-        self.setFixedSize(580, 640)
+        self.setFixedSize(580, 650)
         self.apply_theme()
         self.init_ui()
 
@@ -246,11 +247,8 @@ class SettingsDialog(QDialog):
                 background-color: #161b26;
                 border: 1px solid #283347;
                 border-radius: 10px;
-                margin-top: 14px;
-                padding-top: 18px;
-                padding-left: 14px;
-                padding-right: 14px;
-                padding-bottom: 14px;
+                margin-top: 18px;
+                padding: 16px 14px 14px 14px;
                 font-weight: bold;
                 font-size: 13px;
                 color: #38bdf8;
@@ -259,9 +257,11 @@ class SettingsDialog(QDialog):
                 subcontrol-origin: margin;
                 subcontrol-position: top left;
                 left: 14px;
-                top: 4px;
-                padding: 0 6px;
+                top: 0px;
+                padding: 2px 8px;
                 background-color: #161b26;
+                border: 1px solid #283347;
+                border-radius: 6px;
                 color: #38bdf8;
             }
             QLineEdit {
@@ -353,38 +353,12 @@ class SettingsDialog(QDialog):
             QSpinBox:focus {
                 border: 1px solid #38bdf8;
             }
-            QTabWidget::pane {
-                border: 1px solid #283347;
-                background-color: #121620;
-                border-radius: 10px;
-                top: -1px;
-                padding: 14px;
-            }
-            QTabBar::tab {
-                background-color: #161b26;
-                color: #94a3b8;
-                padding: 9px 20px;
-                margin-right: 4px;
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QTabBar::tab:hover {
-                background-color: #1e293b;
-                color: #f8fafc;
-            }
-            QTabBar::tab:selected {
-                background-color: #121620;
-                color: #38bdf8;
-                border-top: 2px solid #38bdf8;
-            }
         """)
 
     def init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 18, 20, 18)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
 
         # Header with Logo & Title
         header = QFrame(self)
@@ -423,11 +397,59 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(header)
 
-        tabs = QTabWidget(self)
+        # Modern Segmented Pill Navigation Bar (No lines, no clipping!)
+        nav_bar = QFrame(self)
+        nav_bar.setObjectName("navBar")
+        nav_bar.setStyleSheet("""
+            QFrame#navBar {
+                background-color: #161b26;
+                border: 1px solid #283347;
+                border-radius: 8px;
+                padding: 3px;
+            }
+        """)
+        nav_l = QHBoxLayout(nav_bar)
+        nav_l.setContentsMargins(3, 3, 3, 3)
+        nav_l.setSpacing(4)
+
+        tabs_info = [
+            "AI Modell",
+            "Gombok & Hang",
+            "Kimenetek & HUD",
+            "BTK Szabályok"
+        ]
+
+        self.nav_buttons = []
+        for i, name in enumerate(tabs_info):
+            btn = QPushButton(name, nav_bar)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda checked, idx=i: self.switch_tab(idx))
+            nav_l.addWidget(btn)
+            self.nav_buttons.append(btn)
+
+        layout.addWidget(nav_bar)
+
+        # Content Card with QStackedWidget (Seamless, rounded, no overlapping border cuts)
+        content_card = QFrame(self)
+        content_card.setObjectName("contentCard")
+        content_card.setStyleSheet("""
+            QFrame#contentCard {
+                background-color: #121620;
+                border: 1px solid #283347;
+                border-radius: 12px;
+                padding: 8px;
+            }
+        """)
+        card_layout = QVBoxLayout(content_card)
+        card_layout.setContentsMargins(8, 8, 8, 8)
+
+        self.stack = QStackedWidget(content_card)
+        card_layout.addWidget(self.stack)
 
         # Tab 1: AI & Beszédfelismerés
         tab_ai = QWidget()
         ai_layout = QVBoxLayout(tab_ai)
+        ai_layout.setContentsMargins(8, 8, 8, 8)
         ai_layout.setSpacing(12)
 
         api_group = QGroupBox("Google Gemini API (Ingyenes)", tab_ai)
@@ -451,7 +473,7 @@ class SettingsDialog(QDialog):
         model_row = QHBoxLayout()
         model_row.addWidget(QLabel("AI Modell:", api_group))
         self.combo_model = QComboBox(api_group)
-        self.combo_model.setEditable(True)
+        self.combo_model.setEditable(False)
         self.combo_model.addItem("Gemini 3.1 Flash-Lite (Legújabb)", "gemini-3.1-flash-lite")
         self.combo_model.addItem("Gemini 2.0 Flash-Lite (Villámgyors)", "gemini-2.0-flash-lite")
         self.combo_model.addItem("Gemini 2.5 Flash (Kiegyensúlyozott)", "gemini-2.5-flash")
@@ -465,7 +487,8 @@ class SettingsDialog(QDialog):
                 found = True
                 break
         if not found:
-            self.combo_model.setCurrentText(cur_model)
+            self.combo_model.addItem(cur_model, cur_model)
+            self.combo_model.setCurrentIndex(self.combo_model.count() - 1)
         model_row.addWidget(self.combo_model)
         api_layout.addLayout(model_row)
 
@@ -491,10 +514,12 @@ class SettingsDialog(QDialog):
 
         ai_layout.addWidget(api_group)
         ai_layout.addStretch()
+        self.stack.addWidget(tab_ai)
 
         # Tab 2: Gyorsbillentyűk & Bemenet
         tab_input = QWidget()
         input_layout = QVBoxLayout(tab_input)
+        input_layout.setContentsMargins(8, 8, 8, 8)
         input_layout.setSpacing(12)
 
         hotkey_group = QGroupBox("Gyorsbillentyűk (Hotkey)", tab_input)
@@ -547,10 +572,12 @@ class SettingsDialog(QDialog):
         mic_layout.addWidget(self.combo_mics)
         input_layout.addWidget(mic_group)
         input_layout.addStretch()
+        self.stack.addWidget(tab_input)
 
         # Tab 3: Kimenetek (Vágólap, Hang, Overlay)
         tab_output = QWidget()
         out_layout = QVBoxLayout(tab_output)
+        out_layout.setContentsMargins(8, 8, 8, 8)
         out_layout.setSpacing(12)
 
         # Clipboard
@@ -601,10 +628,12 @@ class SettingsDialog(QDialog):
         ov_l.addLayout(dur_row)
         out_layout.addWidget(overlay_group)
         out_layout.addStretch()
+        self.stack.addWidget(tab_output)
 
         # Tab 4: BTK & Enyhítés
         tab_btk = QWidget()
         btk_l = QVBoxLayout(tab_btk)
+        btk_l.setContentsMargins(8, 8, 8, 8)
         btk_l.setSpacing(12)
 
         ease_group = QGroupBox("Enyhítés Mértéke (Rendfokozat alapján)", tab_btk)
@@ -656,17 +685,16 @@ class SettingsDialog(QDialog):
         btk_l.addWidget(sync_group)
 
         btk_l.addStretch()
+        self.stack.addWidget(tab_btk)
 
-        tabs.addTab(tab_ai, "AI Modell")
-        tabs.addTab(tab_input, "Gombok & Hang")
-        tabs.addTab(tab_output, "Kimenetek & HUD")
-        tabs.addTab(tab_btk, "BTK Szabályok")
+        layout.addWidget(content_card)
 
-        layout.addWidget(tabs)
+        # Set default tab to AI (0)
+        self.switch_tab(0)
 
         # Buttons footer
         btn_layout = QHBoxLayout()
-        btn_layout.setContentsMargins(4, 0, 4, 0)
+        btn_layout.setContentsMargins(4, 4, 4, 0)
 
         lbl_ver = QLabel(f"v{APP_VERSION}", self)
         lbl_ver.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold;")
@@ -676,17 +704,17 @@ class SettingsDialog(QDialog):
         btn_chk_update.setStyleSheet("""
             QPushButton {
                 font-size: 11px;
-                padding: 5px 12px;
-                background-color: #1e293b;
+                padding: 6px 12px;
+                background-color: #161b26;
                 color: #cbd5e1;
-                border: 1px solid #334155;
+                border: 1px solid #283347;
                 border-radius: 6px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #334155;
+                background-color: #1e293b;
                 color: #38bdf8;
-                border-color: #475569;
+                border-color: #38bdf8;
             }
         """)
         btn_chk_update.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -699,16 +727,16 @@ class SettingsDialog(QDialog):
         btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cancel.setStyleSheet("""
             QPushButton {
-                background-color: #1e293b;
+                background-color: #161b26;
                 color: #cbd5e1;
-                border: 1px solid #334155;
+                border: 1px solid #283347;
                 border-radius: 6px;
-                padding: 7px 18px;
+                padding: 8px 18px;
                 font-size: 13px;
                 font-weight: 600;
             }
             QPushButton:hover {
-                background-color: #334155;
+                background-color: #1e293b;
                 color: white;
             }
         """)
@@ -722,7 +750,7 @@ class SettingsDialog(QDialog):
                 background-color: #2563eb;
                 color: white;
                 font-weight: bold;
-                padding: 7px 22px;
+                padding: 8px 22px;
                 border-radius: 6px;
                 border: none;
                 font-size: 13px;
@@ -735,6 +763,38 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(btn_save)
 
         layout.addLayout(btn_layout)
+
+    def switch_tab(self, index: int):
+        self.stack.setCurrentIndex(index)
+        for i, btn in enumerate(self.nav_buttons):
+            if i == index:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #2563eb;
+                        color: #ffffff;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        padding: 7px 16px;
+                        border: none;
+                        font-size: 12px;
+                    }
+                """)
+            else:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: transparent;
+                        color: #94a3b8;
+                        font-weight: 500;
+                        border-radius: 6px;
+                        padding: 7px 16px;
+                        border: none;
+                        font-size: 12px;
+                    }
+                    QPushButton:hover {
+                        background-color: #1e293b;
+                        color: #f8fafc;
+                    }
+                """)
 
     def _manual_check_update(self):
         from updater import check_for_updates_sync, UpdateDialog
