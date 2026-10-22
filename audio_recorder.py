@@ -63,11 +63,14 @@ class AudioRecorder:
 
             # Auto-gain normalization: felerositi a halk mikrofonhangot, hogy a beszed tiszta legyen
             max_amp = np.max(np.abs(audio_data))
-            if max_amp > 100:
-                target_peak = 25000.0
-                gain = min(15.0, max(1.0, target_peak / float(max_amp)))
-                audio_data = np.clip(audio_data * gain, -32767, 32767).astype(np.int16)
-                logger.info(f"Audio normalized with gain: {gain:.2f}x (original max: {max_amp})")
+            if max_amp < 150:
+                logger.info(f"Recorded audio is silent or too quiet (max_amp={max_amp})")
+                return b"SILENCE"
+
+            target_peak = 25000.0
+            gain = min(15.0, max(1.0, target_peak / float(max_amp)))
+            audio_data = np.clip(audio_data * gain, -32767, 32767).astype(np.int16)
+            logger.info(f"Audio normalized with gain: {gain:.2f}x (original max: {max_amp})")
 
             # Convert to WAV in memory
             wav_io = io.BytesIO()

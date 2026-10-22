@@ -1,6 +1,6 @@
 ; SeePD BTK Assistant - Official Windows Installer Script
 #define MyAppName "SeePD BTK Asszisztens"
-#define MyAppVersion "1.0.14"
+#define MyAppVersion "1.0.15"
 #define MyAppPublisher "SeePD"
 #define MyAppURL "https://github.com/Crypt97/SeePD-BTK-VoiceAssistant"
 #define MyAppExeName "SeePDBTKAssistant.exe"

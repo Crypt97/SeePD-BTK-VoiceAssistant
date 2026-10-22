@@ -28,6 +28,14 @@ class TTSService:
     def set_rate(self, rate: int):
         self.rate = max(100, min(300, rate))
 
+    def stop(self):
+        """Instantly purges speech queue so older voice outputs do not lag or overlap."""
+        try:
+            with self._queue.mutex:
+                self._queue.queue.clear()
+        except Exception:
+            pass
+
     def speak(self, text: str):
         if not self.enabled or not text:
             return

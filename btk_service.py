@@ -79,10 +79,14 @@ class BTKService:
 
         self.points_by_id = {p["id"]: p for p in self.points}
         self.points_by_code = {p["pNumber"].strip().upper(): p for p in self.points if p.get("pNumber")}
+        self._cached_summary_context = None
         logger.info(f"Loaded {len(self.points)} valid BTK offenses with hierarchical full names.")
 
     def get_summary_context_for_ai(self):
-        """Kompakt kontextus készítése a Gemini AI számára az összes BTK tételből."""
+        """Kompakt kontextus készítése a Gemini AI számára az összes BTK tételből (gyorsítótárazva)."""
+        if getattr(self, "_cached_summary_context", None):
+            return self._cached_summary_context
+
         lines = []
         for p in self.points:
             code = p.get("pNumber", "").strip()
@@ -96,4 +100,5 @@ class BTKService:
             fine_str = f"Bírság: {f_min}-{f_max} Ft"
             desc_str = f" [Leírás: {desc[:60]}...]" if desc else ""
             lines.append(f"[{code}] {full_name} ({cat_name}) - {fine_str}{jail_str}{desc_str}")
-        return "\n".join(lines)
+        self._cached_summary_context = "\n".join(lines)
+        return self._cached_summary_context

@@ -126,13 +126,26 @@ HIVATALOS BTK TÉTELEK ÉS RÖVIDÍTÉSEIK:
 Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd! Ne duplikálj kódokat! Ne írj semmi más szöveget a JSON-ön kívül!
 """
 
+            # Fast JSON configuration with thinking disabled for lowest possible latency (~800ms)
+            cfg_kwargs = {
+                "response_mime_type": "application/json",
+                "temperature": 0.1
+            }
+            if hasattr(types, "ThinkingConfig"):
+                try:
+                    cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+                except Exception:
+                    pass
+            gen_config = types.GenerateContentConfig(**cfg_kwargs)
+
             try:
                 response = self._client.models.generate_content(
                     model=self.model_name,
                     contents=[
                         types.Part.from_bytes(data=wav_bytes, mime_type="audio/wav"),
                         prompt
-                    ]
+                    ],
+                    config=gen_config
                 )
             except Exception as model_err:
                 err_lower = str(model_err).lower()
@@ -143,7 +156,8 @@ Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd!
                         contents=[
                             types.Part.from_bytes(data=wav_bytes, mime_type="audio/wav"),
                             prompt
-                        ]
+                        ],
+                        config=gen_config
                     )
                 else:
                     raise model_err
@@ -208,17 +222,30 @@ Válaszként kizárólag JSON-t adj vissza:
 BTK lista:
 {btk_context}
 """
+            cfg_kwargs = {
+                "response_mime_type": "application/json",
+                "temperature": 0.1
+            }
+            if hasattr(types, "ThinkingConfig"):
+                try:
+                    cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+                except Exception:
+                    pass
+            gen_config = types.GenerateContentConfig(**cfg_kwargs)
+
             try:
                 res = self._client.models.generate_content(
                     model=self.model_name,
-                    contents=prompt
+                    contents=prompt,
+                    config=gen_config
                 )
             except Exception as model_err:
                 if "404" in str(model_err) or "not found" in str(model_err).lower():
                     logger.warning(f"Model {self.model_name} returned 404 for text, falling back to gemini-2.5-flash")
                     res = self._client.models.generate_content(
                         model="gemini-2.5-flash",
-                        contents=prompt
+                        contents=prompt,
+                        config=gen_config
                     )
                 else:
                     raise model_err

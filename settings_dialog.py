@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
     "hotkey": "f9",
     "hotkey_mode": "toggle", # "hold" (Push-To-Talk) or "toggle" (Push-To-Toggle)
     "text_hotkey": "f10",
+    "enable_audio_cues": True, # Low-latency acoustic beep feedback
     "audio_device_index": None,
     "enable_clipboard": True,
     "clipboard_template": "{codes}",
@@ -551,6 +552,10 @@ class SettingsDialog(QDialog):
         hk_text_row.addStretch()
         hk_layout.addLayout(hk_text_row)
 
+        self.chk_cues = QCheckBox("Rövid hangjelzés (Beep) felvétel indításakor és leállításakor", hotkey_group)
+        self.chk_cues.setChecked(self.cfg.get("enable_audio_cues", True))
+        hk_layout.addWidget(self.chk_cues)
+
         lbl_hint = QLabel("Tipp: Kattints bármelyik gombra, majd nyomd le a kívánt billentyűt a rögzítéshez (ESC: mégse).", hotkey_group)
         lbl_hint.setStyleSheet("color: #64748b; font-size: 11px; margin-top: 4px;")
         hk_layout.addWidget(lbl_hint)
@@ -817,6 +822,7 @@ class SettingsDialog(QDialog):
         self.cfg["hotkey"] = self.btn_hotkey.get_key()
         self.cfg["hotkey_mode"] = self.combo_hk_mode.currentData()
         self.cfg["text_hotkey"] = self.btn_text_hotkey.get_key()
+        self.cfg["enable_audio_cues"] = self.chk_cues.isChecked()
         self.cfg["audio_device_index"] = self.combo_mics.currentData()
         self.cfg["enable_clipboard"] = self.chk_clip.isChecked()
         self.cfg["enable_tts"] = self.chk_tts.isChecked()

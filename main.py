@@ -33,6 +33,24 @@ from icons import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+def play_audio_cue(cue: str):
+    """Low-latency acoustic feedback on background thread for in-game tactile awareness."""
+    def _run():
+        try:
+            import winsound
+            if cue == "start":
+                winsound.Beep(880, 50)  # Subtle high chirp
+            elif cue == "stop":
+                winsound.Beep(650, 50)  # Lower acknowledgment chirp
+            elif cue == "success":
+                winsound.Beep(880, 40)
+                winsound.Beep(1320, 60) # Positive double chirp
+            elif cue == "error":
+                winsound.Beep(320, 100) # Low subtle error tone
+        except Exception:
+            pass
+    threading.Thread(target=_run, daemon=True).start()
+
 class WorkerSignals(QObject):
     recording_started = pyqtSignal()
     recording_stopped = pyqtSignal()
@@ -279,6 +297,9 @@ class BTKVoiceApp:
             return
         self.is_recording = True
         self._request_counter += 1  # Invalidate any pending background AI threads
+        self.tts.stop()  # Stop any lingering speech output immediately
+        if self.cfg.get("enable_audio_cues", True):
+            play_audio_cue("start")
         dev_idx = self.cfg.get("audio_device_index")
         self.recorder.start_recording(device_index=dev_idx)
         self.signals.recording_started.emit()
@@ -287,6 +308,8 @@ class BTKVoiceApp:
         if not self.is_recording:
             return
         self.is_recording = False
+        if self.cfg.get("enable_audio_cues", True):
+            play_audio_cue("stop")
         wav_bytes = self.recorder.stop_recording()
         self.signals.recording_stopped.emit()
 
@@ -296,9 +319,11 @@ class BTKVoiceApp:
 
     def _process_worker(self, wav_bytes, req_id):
         try:
-            if not wav_bytes or len(wav_bytes) < 1000:
+            if not wav_bytes or len(wav_bytes) < 1000 or wav_bytes == b"SILENCE":
                 if req_id == self._request_counter:
-                    self.signals.analysis_error.emit("Nem sikerült hangot rögzíteni (túl rövid vagy üres).")
+                    if self.cfg.get("enable_audio_cues", True):
+                        play_audio_cue("error")
+                    self.signals.analysis_error.emit("Nem észlelhető beszéd a mikrofonból (túl halk vagy üres).")
                 return
 
             res = self.ai_analyzer.analyze_audio(wav_bytes)
@@ -308,6 +333,8 @@ class BTKVoiceApp:
                 return
 
             if "error" in res and res["error"]:
+                if self.cfg.get("enable_audio_cues", True):
+                    play_audio_cue("error")
                 self.signals.analysis_error.emit(res["error"])
                 return
 
@@ -316,9 +343,13 @@ class BTKVoiceApp:
             ease_p = self.cfg.get("ease_percent", 0)
 
             calc_result = self.calculator.calculate(offenses, ease_percent=ease_p)
+            if self.cfg.get("enable_audio_cues", True):
+                play_audio_cue("success")
             self.signals.analysis_done.emit(calc_result, transcription)
         except Exception as e:
             if req_id == self._request_counter:
+                if self.cfg.get("enable_audio_cues", True):
+                    play_audio_cue("error")
                 logger.error(f"Error in _process_worker: {e}", exc_info=True)
                 self.signals.analysis_error.emit(f"Hiba a feldolgozás során: {e}")
 
@@ -374,15 +405,18 @@ class BTKVoiceApp:
             dur = self.cfg.get("overlay_duration_sec", 10)
             self.overlay.show_result(calc_result, transcription=transcription, auto_hide_sec=dur)
 
-        # 2. Clipboard
+        # 2. Clipboard with robust retry loop (prevents sharing violations when game is active)
         if self.cfg.get("enable_clipboard", True):
             copy_text = calc_result.get("copy_text", "")
             if copy_text:
-                try:
-                    pyperclip.copy(copy_text)
-                    logger.info(f"Copied to clipboard: {copy_text}")
-                except Exception as e:
-                    logger.error(f"Clipboard error: {e}")
+                for attempt in range(3):
+                    try:
+                        pyperclip.copy(copy_text)
+                        logger.info(f"Copied to clipboard: {copy_text}")
+                        break
+                    except Exception as e:
+                        logger.warning(f"Clipboard copy retry {attempt+1}/3: {e}")
+                        time.sleep(0.04)
 
         # 3. TTS Speech
         if self.cfg.get("enable_tts", True):
