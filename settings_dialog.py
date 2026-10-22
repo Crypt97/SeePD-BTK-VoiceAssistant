@@ -231,6 +231,31 @@ class SettingsDialog(QDialog):
         self.apply_theme()
         self.init_ui()
 
+    def _create_section_card(self, title: str, parent: QWidget = None):
+        card = QFrame(parent)
+        card.setObjectName("settingsCard")
+        card.setStyleSheet("""
+            QFrame#settingsCard {
+                background-color: #141824;
+                border: none;
+                border-radius: 12px;
+            }
+        """)
+        card_l = QVBoxLayout(card)
+        card_l.setContentsMargins(18, 16, 18, 16)
+        card_l.setSpacing(12)
+
+        title_lbl = QLabel(title, card)
+        title_lbl.setStyleSheet("""
+            color: #38bdf8;
+            font-size: 13px;
+            font-weight: bold;
+            background: transparent;
+            padding-bottom: 2px;
+        """)
+        card_l.addWidget(title_lbl)
+        return card, card_l
+
     def apply_theme(self):
         self.setStyleSheet("""
             QDialog {
@@ -242,26 +267,6 @@ class SettingsDialog(QDialog):
                 color: #f8fafc;
                 font-size: 13px;
                 background: transparent;
-            }
-            QGroupBox {
-                background-color: #141824;
-                border: none;
-                border-radius: 12px;
-                margin-top: 14px;
-                padding: 20px 16px 16px 16px;
-                font-weight: bold;
-                font-size: 13px;
-                color: #38bdf8;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                left: 14px;
-                top: 0px;
-                padding: 0 4px;
-                background-color: transparent;
-                border: none;
-                color: #38bdf8;
             }
             QLineEdit {
                 background-color: #1e293b;
@@ -450,9 +455,7 @@ class SettingsDialog(QDialog):
         ai_layout.setContentsMargins(8, 8, 8, 8)
         ai_layout.setSpacing(12)
 
-        api_group = QGroupBox("Google Gemini API (Ingyenes)", tab_ai)
-        api_layout = QVBoxLayout(api_group)
-        api_layout.setSpacing(10)
+        api_group, api_layout = self._create_section_card("Google Gemini API (Ingyenes)", tab_ai)
 
         lbl_info = QLabel(
             "A Google AI Studio teljesen ingyenes API kulcsot biztosít,\n"
@@ -520,9 +523,7 @@ class SettingsDialog(QDialog):
         input_layout.setContentsMargins(8, 8, 8, 8)
         input_layout.setSpacing(12)
 
-        hotkey_group = QGroupBox("Gyorsbillentyűk (Hotkey)", tab_input)
-        hk_layout = QVBoxLayout(hotkey_group)
-        hk_layout.setSpacing(10)
+        hotkey_group, hk_layout = self._create_section_card("Gyorsbillentyűk (Hotkey)", tab_input)
 
         hk_row = QHBoxLayout()
         hk_row.addWidget(QLabel("Hangrögzítés gombja (Voice):", hotkey_group))
@@ -557,8 +558,7 @@ class SettingsDialog(QDialog):
         input_layout.addWidget(hotkey_group)
 
         # Mikrofon választó
-        mic_group = QGroupBox("Mikrofon Kiválasztása", tab_input)
-        mic_layout = QVBoxLayout(mic_group)
+        mic_group, mic_layout = self._create_section_card("Mikrofon Kiválasztása", tab_input)
         self.combo_mics = QComboBox(mic_group)
         self.combo_mics.addItem("Alapértelmezett rendszer mikrofon", None)
         devices = AudioRecorder.get_input_devices()
@@ -579,16 +579,14 @@ class SettingsDialog(QDialog):
         out_layout.setSpacing(12)
 
         # Clipboard
-        clip_group = QGroupBox("Vágólap (Gyorsmásolás)", tab_output)
-        clip_l = QVBoxLayout(clip_group)
+        clip_group, clip_l = self._create_section_card("Vágólap (Gyorsmásolás)", tab_output)
         self.chk_clip = QCheckBox("Automatikus másolás a vágólapra (Ctrl+V a játékban)", clip_group)
         self.chk_clip.setChecked(self.cfg.get("enable_clipboard", True))
         clip_l.addWidget(self.chk_clip)
         out_layout.addWidget(clip_group)
 
         # TTS
-        tts_group = QGroupBox("Hangos Visszajelzés (TTS fülhallgatóba)", tab_output)
-        tts_l = QVBoxLayout(tts_group)
+        tts_group, tts_l = self._create_section_card("Hangos Visszajelzés (TTS fülhallgatóba)", tab_output)
         self.chk_tts = QCheckBox("Hangos összegzés bemondása fülhallgatóba", tts_group)
         self.chk_tts.setChecked(self.cfg.get("enable_tts", True))
         tts_l.addWidget(self.chk_tts)
@@ -609,8 +607,7 @@ class SettingsDialog(QDialog):
         out_layout.addWidget(tts_group)
 
         # HUD Overlay
-        overlay_group = QGroupBox("Képernyő Overlay (In-Game HUD)", tab_output)
-        ov_l = QVBoxLayout(overlay_group)
+        overlay_group, ov_l = self._create_section_card("Képernyő Overlay (In-Game HUD)", tab_output)
         self.chk_overlay = QCheckBox("Lebegő átlátszó HUD megjelenítése a játék felett", overlay_group)
         self.chk_overlay.setChecked(self.cfg.get("enable_overlay", True))
         ov_l.addWidget(self.chk_overlay)
@@ -634,8 +631,7 @@ class SettingsDialog(QDialog):
         btk_l.setContentsMargins(8, 8, 8, 8)
         btk_l.setSpacing(12)
 
-        ease_group = QGroupBox("Enyhítés Mértéke (Rendfokozat alapján)", tab_btk)
-        ease_l = QVBoxLayout(ease_group)
+        ease_group, ease_l = self._create_section_card("Enyhítés Mértéke (Rendfokozat alapján)", tab_btk)
         self.combo_ease = QComboBox(ease_group)
         self.combo_ease.addItem("0% - Nincs enyhítés (Alapértelmezett)", 0)
         self.combo_ease.addItem("10% - Őrmester / Deputy I (max 10%)", 10)
@@ -651,9 +647,7 @@ class SettingsDialog(QDialog):
         ease_l.addWidget(self.combo_ease)
         btk_l.addWidget(ease_group)
 
-        sync_group = QGroupBox("Élő SeePD BTK Szinkronizáció", tab_btk)
-        sync_l = QVBoxLayout(sync_group)
-        sync_l.setSpacing(8)
+        sync_group, sync_l = self._create_section_card("Élő SeePD BTK Szinkronizáció", tab_btk)
 
         btn_refresh_btk = QPushButton("BTK Adatbázis azonnali frissítése (btkapi.seepd.hu)", sync_group)
         btn_refresh_btk.setCursor(Qt.CursorShape.PointingHandCursor)
