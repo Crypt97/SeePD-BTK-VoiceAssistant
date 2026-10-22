@@ -37,15 +37,18 @@ class AIAnalyzer:
             logger.error(f"Failed to initialize google-genai client: {e}")
             self._client = None
 
-    def _get_gen_config(self):
-        """Builds ultra-fast JSON config with thinking disabled."""
+    def _get_gen_config(self, model: str = None):
+        """Builds ultra-fast JSON config, only attaching thinking_budget=0 if model supports thinking."""
         if not types:
             return None
         cfg_kwargs = {
             "response_mime_type": "application/json",
             "temperature": 0.1
         }
-        if hasattr(types, "ThinkingConfig"):
+        target_model = (model or self.model_name or "").lower()
+        # ThinkingConfig is only valid on models that support thinking (e.g. Gemini 2.5)
+        # Passing it to Gemma or Gemini 2.0 causes 400 INVALID_ARGUMENT!
+        if "2.5" in target_model and hasattr(types, "ThinkingConfig"):
             try:
                 cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
             except Exception:
@@ -173,21 +176,26 @@ Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd!
                     )
             except Exception as model_err:
                 err_lower = str(model_err).lower()
-                if "404" in str(model_err) or "not found" in err_lower or "modality" in err_lower or "audio" in err_lower or "gemma" in self.model_name.lower():
-                    logger.warning(f"Model {self.model_name} cannot process audio directly, falling back to gemini-2.5-flash: {model_err}")
-                    if gen_config:
+                logger.warning(f"Audio model {self.model_name} failed ({model_err}), falling back to gemini-2.5-flash...")
+                fallback_model = "gemini-2.5-flash"
+                fb_config = self._get_gen_config(fallback_model)
+                try:
+                    if fb_config:
                         response = self._client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model=fallback_model,
                             contents=contents,
-                            config=gen_config
+                            config=fb_config
                         )
                     else:
                         response = self._client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model=fallback_model,
                             contents=contents
                         )
-                else:
-                    raise model_err
+                except Exception:
+                    response = self._client.models.generate_content(
+                        model=fallback_model,
+                        contents=contents
+                    )
 
             response_text = response.text or ""
             if not response_text:
@@ -249,7 +257,7 @@ Válaszként kizárólag JSON-t adj vissza:
 BTK lista:
 {btk_context}
 """
-            gen_config = self._get_gen_config()
+            gen_config = self._get_gen_config(self.model_name)
 
             try:
                 if gen_config:
@@ -264,21 +272,27 @@ BTK lista:
                         contents=prompt
                     )
             except Exception as model_err:
-                if "404" in str(model_err) or "not found" in str(model_err).lower():
-                    logger.warning(f"Model {self.model_name} returned 404 for text, falling back to gemini-2.5-flash")
-                    if gen_config:
+                err_lower = str(model_err).lower()
+                logger.warning(f"Direct text model {self.model_name} failed ({model_err}), falling back to gemini-2.5-flash...")
+                fallback_model = "gemini-2.5-flash"
+                fb_config = self._get_gen_config(fallback_model)
+                try:
+                    if fb_config:
                         res = self._client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model=fallback_model,
                             contents=prompt,
-                            config=gen_config
+                            config=fb_config
                         )
                     else:
                         res = self._client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model=fallback_model,
                             contents=prompt
                         )
-                else:
-                    raise model_err
+                except Exception:
+                    res = self._client.models.generate_content(
+                        model=fallback_model,
+                        contents=prompt
+                    )
             json_str = res.text.strip()
             if "```json" in json_str:
                 json_str = json_str.split("```json")[1].split("```")[0].strip()
