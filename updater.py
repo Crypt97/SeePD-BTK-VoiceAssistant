@@ -23,7 +23,7 @@ from icons import get_app_icon, get_app_pixmap
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.11"
+APP_VERSION = "1.0.12"
 GITHUB_REPO = "Crypt97/SeePD-BTK-VoiceAssistant"
 GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
@@ -324,7 +324,7 @@ class UpdateDialog(QDialog):
         dir_escaped = exe_dir.replace("'", "''")
 
         # Robust PowerShell script that:
-        # 1. Waits for parent PID to exit completely
+        # 1. Force terminates the parent process to immediately release file locks
         # 2. Replaces exe with retry loop
         # 3. Purges _MEIPASS environment variables to prevent Python DLL load error
         # 4. Launches updated exe cleanly and detaches
@@ -335,20 +335,17 @@ $CurrentExe = '{curr_escaped}'
 $NewExeTemp = '{temp_escaped}'
 $ExeDir = '{dir_escaped}'
 
-# 1. Wait for current process to completely exit
+# 1. Force terminate target process if still alive
 try {{
-    $proc = Get-Process -Id $TargetPid -ErrorAction SilentlyContinue
-    if ($proc) {{
-        $proc.WaitForExit(15000)
-    }}
+    Stop-Process -Id $TargetPid -Force -ErrorAction SilentlyContinue
 }} catch {{}}
 
-# Buffer to let Windows release file locks and clean up temp dirs
+# Wait 2 seconds for OS file handles to be completely released
 Start-Sleep -Seconds 2
 
 # 2. Retry loop for file replacement
 $replaced = $false
-for ($i = 0; $i -lt 15; $i++) {{
+for ($i = 0; $i -lt 20; $i++) {{
     try {{
         if (Test-Path -LiteralPath $CurrentExe) {{
             Remove-Item -LiteralPath $CurrentExe -Force -ErrorAction Stop
@@ -394,4 +391,13 @@ Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction Silent
             env=clean_env,
             creationflags=creation_flags
         )
-        sys.exit(0)
+
+        # Force terminate process immediately at Win32 OS level so no threads block shutdown
+        try:
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                app.quit()
+        except Exception:
+            pass
+        os._exit(0)
