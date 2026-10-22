@@ -100,6 +100,26 @@ SVG_KEYBOARD = """
 </svg>
 """
 
+# Justice Scales for Bail (Lucide scale)
+SVG_SCALE_TEMPLATE = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+  <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+  <path d="M7 21h10"/>
+  <path d="M12 3v18"/>
+  <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+</svg>
+"""
+
+# ID Card for Driver's License
+SVG_ID_CARD_TEMPLATE = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="18" height="14" x="3" y="5" rx="2"/>
+  <path d="M7 15h4M15 15h2M7 11h2"/>
+  <circle cx="16" cy="10" r="1.5"/>
+</svg>
+"""
+
 def get_pixmap(svg_code: str, width: int = 18, height: int = 18) -> QPixmap:
     """Renders SVG XML string to QPixmap cleanly."""
     renderer = QSvgRenderer(QByteArray(svg_code.strip().encode('utf-8')))
@@ -110,6 +130,10 @@ def get_pixmap(svg_code: str, width: int = 18, height: int = 18) -> QPixmap:
     renderer.render(painter, QRectF(0, 0, width, height))
     painter.end()
     return pix
+
+def get_colored_pixmap(svg_template: str, color: str, width: int = 18, height: int = 18) -> QPixmap:
+    """Renders SVG template with dynamic stroke color."""
+    return get_pixmap(svg_template.format(color=color), width, height)
 
 def get_icon(svg_code: str, size: int = 24) -> QIcon:
     """Renders SVG XML string to QIcon."""

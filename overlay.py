@@ -11,7 +11,8 @@ from PyQt6.QtGui import QColor
 
 from icons import (
     SVG_POLICE_BADGE, SVG_MIC, SVG_SPINNER, SVG_CHECK, SVG_CLIPBOARD, SVG_ALERT,
-    SVG_KEYBOARD, get_pixmap, get_icon, get_app_pixmap, get_app_icon
+    SVG_KEYBOARD, SVG_SCALE_TEMPLATE, SVG_ID_CARD_TEMPLATE,
+    get_pixmap, get_icon, get_colored_pixmap, get_app_pixmap, get_app_icon
 )
 
 def format_huf(val: int) -> str:
@@ -190,19 +191,19 @@ class InGameOverlay(QWidget):
         self.offenses_container.setSpacing(5)
         card_layout.addLayout(self.offenses_container)
 
-        # Dynamic 2-Tier Stats Container (Spacious, modern, never clipped)
+        # Dynamic 2-Tier Stats Container (Spacious, modern, completely borderless, transparent)
         self.stats_container = QVBoxLayout()
-        self.stats_container.setSpacing(8)
+        self.stats_container.setSpacing(10)
 
         # Row 1: Primary Metrics (Fine & Jail)
         metrics_row = QHBoxLayout()
-        metrics_row.setSpacing(10)
+        metrics_row.setSpacing(12)
 
-        # Fine Hero Box
-        self.fine_card = QFrame(self.card)
-        self.fine_card.setStyleSheet("background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 10px;")
+        # Fine Hero Box (Transparent, no border)
+        self.fine_card = QWidget(self.card)
+        self.fine_card.setStyleSheet("background: transparent; border: none;")
         fine_l = QVBoxLayout(self.fine_card)
-        fine_l.setContentsMargins(14, 10, 14, 10)
+        fine_l.setContentsMargins(0, 0, 0, 0)
         fine_l.setSpacing(3)
         self.fine_title = QLabel("BÍRSÁG ÖSSZESEN", self.fine_card)
         self.fine_title.setStyleSheet("color: #10b981; font-size: 10px; font-weight: bold; border: none; background: transparent; letter-spacing: 0.5px;")
@@ -212,11 +213,11 @@ class InGameOverlay(QWidget):
         fine_l.addWidget(self.fine_val)
         metrics_row.addWidget(self.fine_card)
 
-        # Jail Hero Box
-        self.jail_card = QFrame(self.card)
-        self.jail_card.setStyleSheet("background-color: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.22); border-radius: 10px;")
+        # Jail Hero Box (Transparent, no border)
+        self.jail_card = QWidget(self.card)
+        self.jail_card.setStyleSheet("background: transparent; border: none;")
         jail_l = QVBoxLayout(self.jail_card)
-        jail_l.setContentsMargins(14, 10, 14, 10)
+        jail_l.setContentsMargins(0, 0, 0, 0)
         jail_l.setSpacing(3)
         self.jail_title = QLabel("SZABADSÁGVESZTÉS", self.jail_card)
         self.jail_title.setStyleSheet("color: #f59e0b; font-size: 10px; font-weight: bold; border: none; background: transparent; letter-spacing: 0.5px;")
@@ -228,28 +229,40 @@ class InGameOverlay(QWidget):
 
         self.stats_container.addLayout(metrics_row)
 
-        # Row 2: Secondary Status Badges (Óvadék & Jogosítvány)
+        # Row 2: Secondary Status Indicators (Óvadék & Jogosítvány) with vector SVG icons (NO emojis)
         badges_row = QHBoxLayout()
-        badges_row.setSpacing(10)
+        badges_row.setSpacing(12)
 
-        # Bail Badge
-        self.bail_card = QFrame(self.card)
-        self.bail_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
+        # Bail Status Box
+        self.bail_card = QWidget(self.card)
+        self.bail_card.setStyleSheet("background: transparent; border: none;")
         bail_l = QHBoxLayout(self.bail_card)
-        bail_l.setContentsMargins(10, 8, 10, 8)
-        self.bail_val = QLabel("⚖️ Óvadék: -", self.bail_card)
+        bail_l.setContentsMargins(0, 0, 0, 0)
+        bail_l.setSpacing(6)
+        self.bail_icon = QLabel(self.bail_card)
+        self.bail_icon.setPixmap(get_colored_pixmap(SVG_SCALE_TEMPLATE, "#64748b", 14, 14))
+        self.bail_icon.setStyleSheet("border: none; background: transparent;")
+        self.bail_val = QLabel("Óvadék: -", self.bail_card)
         self.bail_val.setStyleSheet("color: #64748b; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-        bail_l.addWidget(self.bail_val, alignment=Qt.AlignmentFlag.AlignCenter)
+        bail_l.addWidget(self.bail_icon)
+        bail_l.addWidget(self.bail_val)
+        bail_l.addStretch()
         badges_row.addWidget(self.bail_card)
 
-        # License Badge
-        self.docs_card = QFrame(self.card)
-        self.docs_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
+        # License Status Box
+        self.docs_card = QWidget(self.card)
+        self.docs_card.setStyleSheet("background: transparent; border: none;")
         docs_l = QHBoxLayout(self.docs_card)
-        docs_l.setContentsMargins(10, 8, 10, 8)
-        self.docs_val = QLabel("🪪 Jogsi: Érintetlen", self.docs_card)
+        docs_l.setContentsMargins(0, 0, 0, 0)
+        docs_l.setSpacing(6)
+        self.docs_icon = QLabel(self.docs_card)
+        self.docs_icon.setPixmap(get_colored_pixmap(SVG_ID_CARD_TEMPLATE, "#94a3b8", 14, 14))
+        self.docs_icon.setStyleSheet("border: none; background: transparent;")
+        self.docs_val = QLabel("Jogsi: Érintetlen", self.docs_card)
         self.docs_val.setStyleSheet("color: #94a3b8; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-        docs_l.addWidget(self.docs_val, alignment=Qt.AlignmentFlag.AlignCenter)
+        docs_l.addWidget(self.docs_icon)
+        docs_l.addWidget(self.docs_val)
+        docs_l.addStretch()
         badges_row.addWidget(self.docs_card)
 
         self.stats_container.addLayout(badges_row)
@@ -300,11 +313,11 @@ class InGameOverlay(QWidget):
             self._clear_offenses()
             self.fine_val.setText("0 Ft")
             self.jail_val.setText("0 perc")
-            self.bail_val.setText("⚖️ Óvadék: -")
-            self.bail_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
+            self.bail_icon.setPixmap(get_colored_pixmap(SVG_SCALE_TEMPLATE, "#64748b", 14, 14))
+            self.bail_val.setText("Óvadék: -")
             self.bail_val.setStyleSheet("color: #64748b; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.docs_val.setText("🪪 Jogsi: Érintetlen")
-            self.docs_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
+            self.docs_icon.setPixmap(get_colored_pixmap(SVG_ID_CARD_TEMPLATE, "#94a3b8", 14, 14))
+            self.docs_val.setText("Jogsi: Érintetlen")
             self.docs_val.setStyleSheet("color: #94a3b8; font-size: 12px; font-weight: bold; border: none; background: transparent;")
             self.clip_container.hide()
             self._fit_to_content()
@@ -367,35 +380,35 @@ class InGameOverlay(QWidget):
         else:
             self.jail_val.setText(f"{j_min} - {j_max} perc")
 
-        # Bail status (Óvadék)
+        # Bail status (Óvadék) - SVG icon, NO emojis
         bail = calculation_data.get("bail_status", "-")
         if bail in ("Jár", "Van"):
-            self.bail_val.setText("⚖️ Óvadék: Jár")
+            self.bail_icon.setPixmap(get_colored_pixmap(SVG_SCALE_TEMPLATE, "#34d399", 14, 14))
+            self.bail_val.setText("Óvadék: Jár")
             self.bail_val.setStyleSheet("color: #34d399; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.bail_card.setStyleSheet("background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;")
         elif bail in ("Nem", "Nem adható"):
-            self.bail_val.setText("⚖️ Óvadék: Nem adható")
+            self.bail_icon.setPixmap(get_colored_pixmap(SVG_SCALE_TEMPLATE, "#f87171", 14, 14))
+            self.bail_val.setText("Óvadék: Nem adható")
             self.bail_val.setStyleSheet("color: #f87171; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.bail_card.setStyleSheet("background-color: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px;")
         else:
-            self.bail_val.setText(f"⚖️ Óvadék: {bail}")
+            self.bail_icon.setPixmap(get_colored_pixmap(SVG_SCALE_TEMPLATE, "#64748b", 14, 14))
+            self.bail_val.setText(f"Óvadék: {bail}")
             self.bail_val.setStyleSheet("color: #64748b; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.bail_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
 
-        # Driver's License status (Jogosítvány)
+        # Driver's License status (Jogosítvány) - SVG icon, NO emojis
         dl = calculation_data.get("revoke_dl", "Nem")
         if dl == "Kötelező bevonni":
-            self.docs_val.setText("🪪 Jogsi: Kötelező bevonni")
+            self.docs_icon.setPixmap(get_colored_pixmap(SVG_ID_CARD_TEMPLATE, "#f87171", 14, 14))
+            self.docs_val.setText("Jogsi: Kötelező bevonni")
             self.docs_val.setStyleSheet("color: #f87171; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.docs_card.setStyleSheet("background-color: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px;")
         elif dl == "Bevonható":
-            self.docs_val.setText("🪪 Jogsi: Bevonható")
+            self.docs_icon.setPixmap(get_colored_pixmap(SVG_ID_CARD_TEMPLATE, "#fbbf24", 14, 14))
+            self.docs_val.setText("Jogsi: Bevonható")
             self.docs_val.setStyleSheet("color: #fbbf24; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.docs_card.setStyleSheet("background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px;")
         else:
-            self.docs_val.setText("🪪 Jogsi: Érintetlen")
+            self.docs_icon.setPixmap(get_colored_pixmap(SVG_ID_CARD_TEMPLATE, "#94a3b8", 14, 14))
+            self.docs_val.setText("Jogsi: Érintetlen")
             self.docs_val.setStyleSheet("color: #94a3b8; font-size: 12px; font-weight: bold; border: none; background: transparent;")
-            self.docs_card.setStyleSheet("background-color: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;")
 
         self.clip_container.show()
         self._fit_to_content()
