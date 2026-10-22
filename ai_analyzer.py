@@ -8,6 +8,13 @@ import logging
 import re
 from typing import Dict, Any, List
 
+try:
+    from google import genai
+    from google.genai import types
+except Exception:
+    genai = None
+    types = None
+
 logger = logging.getLogger(__name__)
 
 class AIAnalyzer:
@@ -21,11 +28,33 @@ class AIAnalyzer:
 
     def _init_client(self):
         try:
-            from google import genai
-            self._client = genai.Client(api_key=self.google_api_key)
+            if genai:
+                self._client = genai.Client(api_key=self.google_api_key)
+            else:
+                from google import genai as g
+                self._client = g.Client(api_key=self.google_api_key)
         except Exception as e:
             logger.error(f"Failed to initialize google-genai client: {e}")
             self._client = None
+
+    def _get_gen_config(self):
+        """Builds ultra-fast JSON config with thinking disabled."""
+        if not types:
+            return None
+        cfg_kwargs = {
+            "response_mime_type": "application/json",
+            "temperature": 0.1
+        }
+        if hasattr(types, "ThinkingConfig"):
+            try:
+                cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+            except Exception:
+                pass
+        try:
+            return types.GenerateContentConfig(**cfg_kwargs)
+        except Exception as e:
+            logger.warning(f"Failed to create GenerateContentConfig: {e}")
+            return None
 
     def set_api_keys(self, google_api_key: str, groq_api_key: str = "", model_name: str = None):
         self.google_api_key = google_api_key
@@ -88,8 +117,6 @@ class AIAnalyzer:
                 }
 
         try:
-            from google.genai import types
-
             btk_context = self.btk_service.get_summary_context_for_ai()
             
             prompt = f"""
@@ -126,39 +153,39 @@ HIVATALOS BTK TÉTELEK ÉS RÖVIDÍTÉSEIK:
 Kizárólag a fenti listában létező 'code' (rövidítés) kódokat használd! Ne duplikálj kódokat! Ne írj semmi más szöveget a JSON-ön kívül!
 """
 
-            # Fast JSON configuration with thinking disabled for lowest possible latency (~800ms)
-            cfg_kwargs = {
-                "response_mime_type": "application/json",
-                "temperature": 0.1
-            }
-            if hasattr(types, "ThinkingConfig"):
-                try:
-                    cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
-                except Exception:
-                    pass
-            gen_config = types.GenerateContentConfig(**cfg_kwargs)
+            gen_config = self._get_gen_config()
+            contents = [
+                types.Part.from_bytes(data=wav_bytes, mime_type="audio/wav") if types else wav_bytes,
+                prompt
+            ]
 
             try:
-                response = self._client.models.generate_content(
-                    model=self.model_name,
-                    contents=[
-                        types.Part.from_bytes(data=wav_bytes, mime_type="audio/wav"),
-                        prompt
-                    ],
-                    config=gen_config
-                )
+                if gen_config:
+                    response = self._client.models.generate_content(
+                        model=self.model_name,
+                        contents=contents,
+                        config=gen_config
+                    )
+                else:
+                    response = self._client.models.generate_content(
+                        model=self.model_name,
+                        contents=contents
+                    )
             except Exception as model_err:
                 err_lower = str(model_err).lower()
                 if "404" in str(model_err) or "not found" in err_lower or "modality" in err_lower or "audio" in err_lower or "gemma" in self.model_name.lower():
                     logger.warning(f"Model {self.model_name} cannot process audio directly, falling back to gemini-2.5-flash: {model_err}")
-                    response = self._client.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents=[
-                            types.Part.from_bytes(data=wav_bytes, mime_type="audio/wav"),
-                            prompt
-                        ],
-                        config=gen_config
-                    )
+                    if gen_config:
+                        response = self._client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=contents,
+                            config=gen_config
+                        )
+                    else:
+                        response = self._client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=contents
+                        )
                 else:
                     raise model_err
 
@@ -222,31 +249,34 @@ Válaszként kizárólag JSON-t adj vissza:
 BTK lista:
 {btk_context}
 """
-            cfg_kwargs = {
-                "response_mime_type": "application/json",
-                "temperature": 0.1
-            }
-            if hasattr(types, "ThinkingConfig"):
-                try:
-                    cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
-                except Exception:
-                    pass
-            gen_config = types.GenerateContentConfig(**cfg_kwargs)
+            gen_config = self._get_gen_config()
 
             try:
-                res = self._client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=gen_config
-                )
-            except Exception as model_err:
-                if "404" in str(model_err) or "not found" in str(model_err).lower():
-                    logger.warning(f"Model {self.model_name} returned 404 for text, falling back to gemini-2.5-flash")
+                if gen_config:
                     res = self._client.models.generate_content(
-                        model="gemini-2.5-flash",
+                        model=self.model_name,
                         contents=prompt,
                         config=gen_config
                     )
+                else:
+                    res = self._client.models.generate_content(
+                        model=self.model_name,
+                        contents=prompt
+                    )
+            except Exception as model_err:
+                if "404" in str(model_err) or "not found" in str(model_err).lower():
+                    logger.warning(f"Model {self.model_name} returned 404 for text, falling back to gemini-2.5-flash")
+                    if gen_config:
+                        res = self._client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=prompt,
+                            config=gen_config
+                        )
+                    else:
+                        res = self._client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=prompt
+                        )
                 else:
                     raise model_err
             json_str = res.text.strip()
