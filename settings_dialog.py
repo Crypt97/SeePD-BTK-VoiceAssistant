@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent
 from audio_recorder import AudioRecorder
 from icons import get_app_icon
+from updater import APP_VERSION
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -420,6 +421,17 @@ class SettingsDialog(QDialog):
 
         # Buttons footer
         btn_layout = QHBoxLayout()
+
+        lbl_ver = QLabel(f"v{APP_VERSION}", self)
+        lbl_ver.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold;")
+        btn_layout.addWidget(lbl_ver)
+
+        btn_chk_update = QPushButton("Frissítés keresése", self)
+        btn_chk_update.setStyleSheet("font-size: 11px; padding: 4px 10px; background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;")
+        btn_chk_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_chk_update.clicked.connect(self._manual_check_update)
+        btn_layout.addWidget(btn_chk_update)
+
         btn_layout.addStretch()
 
         btn_cancel = QPushButton("Mégse", self)
@@ -432,6 +444,18 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(btn_save)
 
         layout.addLayout(btn_layout)
+
+    def _manual_check_update(self):
+        from updater import check_for_updates_sync, UpdateDialog
+        info = check_for_updates_sync()
+        if not info.get("success", False):
+            QMessageBox.warning(self, "Frissítési hiba", f"Nem sikerült kapcsolódni a GitHubhoz:\n{info.get('error', '')}")
+            return
+        if info.get("update_available"):
+            dlg = UpdateDialog(info, self)
+            dlg.exec()
+        else:
+            QMessageBox.information(self, "Naprakész", f"A legfrissebb verziót használod ({info.get('current_version', 'v1.0.6')})!")
 
     def _open_ai_studio(self):
         import webbrowser

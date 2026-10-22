@@ -39,6 +39,7 @@ class WorkerSignals(QObject):
     analysis_done = pyqtSignal(dict, str)
     analysis_error = pyqtSignal(str)
     open_text_input = pyqtSignal()
+    update_result = pyqtSignal(dict, bool)
 
 class BTKVoiceApp:
     def __init__(self, app: QApplication):
@@ -46,6 +47,7 @@ class BTKVoiceApp:
         self.app.setWindowIcon(get_app_icon())
         self.cfg = load_config()
         self.signals = WorkerSignals()
+        self._pending_update_info = None
 
         # Core Services
         self.btk_service = BTKService()
@@ -83,9 +85,14 @@ class BTKVoiceApp:
         self.signals.analysis_done.connect(self._on_analysis_done)
         self.signals.analysis_error.connect(self._on_analysis_error)
         self.signals.open_text_input.connect(self.open_text_input)
+        self.signals.update_result.connect(self._on_update_result)
 
         self._setup_tray()
+        self.tray.messageClicked.connect(self._on_tray_message_clicked)
         self._start_hotkey_listener()
+
+        # Check for updates in background on launch (silent)
+        threading.Thread(target=self._check_updates_worker, args=(False,), daemon=True).start()
 
         # Initial check for API key
         if not self.cfg.get("google_api_key"):
@@ -116,6 +123,10 @@ class BTKVoiceApp:
         act_settings.triggered.connect(self.open_settings)
         menu.addAction(act_settings)
 
+        act_update = QAction(get_icon(SVG_REFRESH, 16), "Frissítések keresése...", menu)
+        act_update.triggered.connect(lambda: self.check_updates(manual=True))
+        menu.addAction(act_update)
+
         act_refresh_btk = QAction(get_icon(SVG_REFRESH, 16), "BTK Adatbázis Frissítése", menu)
         act_refresh_btk.triggered.connect(self._refresh_btk)
         menu.addAction(act_refresh_btk)
@@ -132,6 +143,44 @@ class BTKVoiceApp:
     def _refresh_btk(self):
         self.btk_service.load_data(force_refresh=True)
         self.tray.showMessage("SeePD BTK", f"BTK adatbázis frissítve ({len(self.btk_service.points)} tétel).", QSystemTrayIcon.MessageIcon.Information, 2500)
+
+    def check_updates(self, manual: bool = True):
+        threading.Thread(target=self._check_updates_worker, args=(manual,), daemon=True).start()
+
+    def _check_updates_worker(self, manual: bool):
+        from updater import check_for_updates_sync
+        info = check_for_updates_sync()
+        self.signals.update_result.emit(info, manual)
+
+    def _on_update_result(self, info: dict, manual: bool):
+        from updater import UpdateDialog
+        if not info.get("success", False):
+            if manual:
+                QMessageBox.warning(None, "Frissítési hiba", f"Nem sikerült kapcsolódni a GitHubhoz:\n{info.get('error', '')}")
+            return
+
+        if info.get("update_available"):
+            self._pending_update_info = info
+            if manual:
+                dlg = UpdateDialog(info)
+                dlg.exec()
+            else:
+                self.tray.showMessage(
+                    "SeePD BTK Frissítés",
+                    f"Új verzió érhető el: {info['latest_version']}!\nKattints ide a letöltéshez és frissítéshez.",
+                    QSystemTrayIcon.MessageIcon.Information,
+                    10000
+                )
+        else:
+            if manual:
+                QMessageBox.information(None, "Naprakész", f"A legfrissebb verziót használod ({info.get('current_version')})!")
+
+    def _on_tray_message_clicked(self):
+        if self._pending_update_info:
+            from updater import UpdateDialog
+            dlg = UpdateDialog(self._pending_update_info)
+            dlg.exec()
+            self._pending_update_info = None
 
     def _test_hud(self):
         """Simulates a test offense to preview HUD."""
