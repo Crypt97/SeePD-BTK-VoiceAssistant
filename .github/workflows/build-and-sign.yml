@@ -30,7 +30,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          python -m PyInstaller --noconsole --onefile --clean --name "SeePDBTKAssistant" --hidden-import="pynput.keyboard._win32" --hidden-import="pynput.mouse._win32" --hidden-import="pyttsx3.drivers" --hidden-import="pyttsx3.drivers.sapi5" --hidden-import="google.genai" --hidden-import="google.genai.types" --hidden-import="PyQt6.QtSvg" --add-data "btk_cache.json;." --exclude-module torch --exclude-module torchvision --exclude-module scipy --exclude-module pandas --exclude-module numba --exclude-module onnxruntime --exclude-module cv2 --exclude-module matplotlib main.py
+          python -m PyInstaller --noconsole --onefile --clean --name "SeePDBTKAssistant" --icon="app.ico" --add-data="app.ico;." --add-data="icon.png;." --hidden-import="pynput.keyboard._win32" --hidden-import="pynput.mouse._win32" --hidden-import="pyttsx3.drivers" --hidden-import="pyttsx3.drivers.sapi5" --hidden-import="google.genai" --hidden-import="google.genai.types" --hidden-import="PyQt6.QtSvg" --add-data "btk_cache.json;." --exclude-module torch --exclude-module torchvision --exclude-module scipy --exclude-module pandas --exclude-module numba --exclude-module onnxruntime --exclude-module cv2 --exclude-module matplotlib main.py
 
       - name: Prepare artifact for SignPath
         continue-on-error: true

@@ -27,7 +27,7 @@ from settings_dialog import SettingsDialog, load_config, save_config
 from text_input_dialog import QuickTextInputDialog
 from icons import (
     SVG_TRAY_BADGE, SVG_MIC, SVG_CHECK, SVG_SETTINGS, SVG_REFRESH, SVG_CLOSE,
-    SVG_KEYBOARD, get_icon
+    SVG_KEYBOARD, get_icon, get_app_icon
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -43,6 +43,7 @@ class WorkerSignals(QObject):
 class BTKVoiceApp:
     def __init__(self, app: QApplication):
         self.app = app
+        self.app.setWindowIcon(get_app_icon())
         self.cfg = load_config()
         self.signals = WorkerSignals()
 
@@ -92,7 +93,7 @@ class BTKVoiceApp:
 
     def _setup_tray(self):
         self.tray = QSystemTrayIcon(self.app)
-        self.tray.setIcon(get_icon(SVG_TRAY_BADGE, 32))
+        self.tray.setIcon(get_app_icon())
         self.tray.setToolTip(f"SeePD BTK Hangasszisztens ({self.cfg.get('hotkey', 'F9').upper()} / {self.cfg.get('text_hotkey', 'F10').upper()})")
 
         menu = QMenu()

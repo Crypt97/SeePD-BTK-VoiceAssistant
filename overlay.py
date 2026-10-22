@@ -11,7 +11,7 @@ from PyQt6.QtGui import QColor
 
 from icons import (
     SVG_POLICE_BADGE, SVG_MIC, SVG_SPINNER, SVG_CHECK, SVG_CLIPBOARD, SVG_ALERT,
-    SVG_KEYBOARD, get_pixmap, get_icon
+    SVG_KEYBOARD, get_pixmap, get_icon, get_app_pixmap, get_app_icon
 )
 
 def format_huf(val: int) -> str:
@@ -96,7 +96,7 @@ class InGameOverlay(QWidget):
 
         self.badge_icon = QLabel(badge_frame)
         self.badge_icon.setStyleSheet("background: transparent; border: none;")
-        self.badge_icon.setPixmap(get_pixmap(SVG_POLICE_BADGE, 15, 15))
+        self.badge_icon.setPixmap(get_app_pixmap(16, 16))
         self.badge_icon.setFixedHeight(16)
         badge_layout.addWidget(self.badge_icon)
 

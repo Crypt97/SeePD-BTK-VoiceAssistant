@@ -10,13 +10,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent
 
-from icons import SVG_POLICE_BADGE, SVG_KEYBOARD, SVG_CLOSE, get_pixmap, get_icon
+from icons import SVG_POLICE_BADGE, SVG_KEYBOARD, SVG_CLOSE, get_pixmap, get_icon, get_app_icon, get_app_pixmap
 
 class QuickTextInputDialog(QWidget):
     submitted = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -78,7 +79,7 @@ class QuickTextInputDialog(QWidget):
         badge_layout.setSpacing(6)
 
         icon_badge = QLabel(badge_frame)
-        icon_badge.setPixmap(get_pixmap(SVG_POLICE_BADGE, 14, 14))
+        icon_badge.setPixmap(get_app_pixmap(15, 15))
         badge_layout.addWidget(icon_badge)
 
         lbl_badge = QLabel("SeePD BTK", badge_frame)

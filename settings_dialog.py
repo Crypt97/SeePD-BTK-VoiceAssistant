@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent
 from audio_recorder import AudioRecorder
+from icons import get_app_icon
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = os.path.dirname(sys.executable)
@@ -219,6 +220,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.btk_service = btk_service
         self.cfg = load_config()
+        self.setWindowIcon(get_app_icon())
         self.setWindowTitle("SeePD BTK Hangasszisztens - Beállítások")
         self.setFixedSize(540, 580)
         self.init_ui()

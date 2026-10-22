@@ -3,6 +3,8 @@ SVG Icons Module
 Professional vector SVG icons sourced from allsvgicons.com (Lucide / Tabler Police & Security packs).
 Renders vector SVGs cleanly into QPixmap and QIcon without emojis.
 """
+import os
+import sys
 from PyQt6.QtCore import QByteArray, QRectF, Qt
 from PyQt6.QtGui import QPainter, QPixmap, QIcon
 from PyQt6.QtSvg import QSvgRenderer
@@ -112,3 +114,36 @@ def get_pixmap(svg_code: str, width: int = 18, height: int = 18) -> QPixmap:
 def get_icon(svg_code: str, size: int = 24) -> QIcon:
     """Renders SVG XML string to QIcon."""
     return QIcon(get_pixmap(svg_code, size, size))
+
+def get_asset_path(filename: str) -> str:
+    """Locates an asset file whether running in development or PyInstaller frozen bundle."""
+    if getattr(sys, 'frozen', False):
+        if hasattr(sys, '_MEIPASS'):
+            p = os.path.join(sys._MEIPASS, filename)
+            if os.path.exists(p):
+                return p
+        exe_dir = os.path.dirname(sys.executable)
+        p = os.path.join(exe_dir, filename)
+        if os.path.exists(p):
+            return p
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, filename)
+
+def get_app_icon() -> QIcon:
+    """Returns the official application shield icon."""
+    ico_path = get_asset_path("app.ico")
+    if os.path.exists(ico_path):
+        return QIcon(ico_path)
+    png_path = get_asset_path("icon.png")
+    if os.path.exists(png_path):
+        return QIcon(png_path)
+    return get_icon(SVG_TRAY_BADGE, 32)
+
+def get_app_pixmap(w: int = 18, h: int = 18) -> QPixmap:
+    """Returns the official application shield pixmap smoothly scaled."""
+    png_path = get_asset_path("icon.png")
+    if os.path.exists(png_path):
+        pm = QPixmap(png_path)
+        if not pm.isNull():
+            return pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    return get_pixmap(SVG_POLICE_BADGE, w, h)
