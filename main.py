@@ -406,6 +406,16 @@ class BTKVoiceApp:
         self.app.quit()
 
 def main():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            myappid = "seepd.btk.assistant.app.1"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            # Notify Windows Explorer shell to refresh icon caches
+            ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
+        except Exception:
+            pass
+
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     assistant = BTKVoiceApp(app)

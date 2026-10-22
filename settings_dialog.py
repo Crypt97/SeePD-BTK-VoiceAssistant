@@ -244,11 +244,11 @@ class SettingsDialog(QDialog):
                 background: transparent;
             }
             QGroupBox {
-                background-color: #161b26;
-                border: 1px solid #283347;
-                border-radius: 10px;
-                margin-top: 18px;
-                padding: 16px 14px 14px 14px;
+                background-color: #141824;
+                border: none;
+                border-radius: 12px;
+                margin-top: 14px;
+                padding: 20px 16px 16px 16px;
                 font-weight: bold;
                 font-size: 13px;
                 color: #38bdf8;
@@ -258,10 +258,9 @@ class SettingsDialog(QDialog):
                 subcontrol-position: top left;
                 left: 14px;
                 top: 0px;
-                padding: 2px 8px;
-                background-color: #161b26;
-                border: 1px solid #283347;
-                border-radius: 6px;
+                padding: 0 4px;
+                background-color: transparent;
+                border: none;
                 color: #38bdf8;
             }
             QLineEdit {
@@ -402,8 +401,8 @@ class SettingsDialog(QDialog):
         nav_bar.setObjectName("navBar")
         nav_bar.setStyleSheet("""
             QFrame#navBar {
-                background-color: #161b26;
-                border: 1px solid #283347;
+                background-color: #141824;
+                border: none;
                 border-radius: 8px;
                 padding: 3px;
             }
@@ -434,10 +433,9 @@ class SettingsDialog(QDialog):
         content_card.setObjectName("contentCard")
         content_card.setStyleSheet("""
             QFrame#contentCard {
-                background-color: #121620;
-                border: 1px solid #283347;
-                border-radius: 12px;
-                padding: 8px;
+                background-color: transparent;
+                border: none;
+                padding: 0px;
             }
         """)
         card_layout = QVBoxLayout(content_card)
@@ -663,7 +661,7 @@ class SettingsDialog(QDialog):
             QPushButton {
                 background-color: #1e293b;
                 color: #38bdf8;
-                border: 1px solid #334155;
+                border: none;
                 border-radius: 6px;
                 padding: 9px 16px;
                 font-weight: bold;
@@ -672,7 +670,6 @@ class SettingsDialog(QDialog):
             QPushButton:hover {
                 background-color: #2563eb;
                 color: white;
-                border-color: #2563eb;
             }
         """)
         btn_refresh_btk.clicked.connect(self._sync_btk)
@@ -704,17 +701,16 @@ class SettingsDialog(QDialog):
         btn_chk_update.setStyleSheet("""
             QPushButton {
                 font-size: 11px;
-                padding: 6px 12px;
+                padding: 6px 14px;
                 background-color: #161b26;
                 color: #cbd5e1;
-                border: 1px solid #283347;
+                border: none;
                 border-radius: 6px;
                 font-weight: 500;
             }
             QPushButton:hover {
                 background-color: #1e293b;
                 color: #38bdf8;
-                border-color: #38bdf8;
             }
         """)
         btn_chk_update.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -729,9 +725,9 @@ class SettingsDialog(QDialog):
             QPushButton {
                 background-color: #161b26;
                 color: #cbd5e1;
-                border: 1px solid #283347;
+                border: none;
                 border-radius: 6px;
-                padding: 8px 18px;
+                padding: 8px 20px;
                 font-size: 13px;
                 font-weight: 600;
             }
