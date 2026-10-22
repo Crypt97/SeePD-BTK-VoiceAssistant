@@ -23,7 +23,7 @@ from icons import get_app_icon, get_app_pixmap
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.9"
+APP_VERSION = "1.0.10"
 GITHUB_REPO = "Crypt97/SeePD-BTK-VoiceAssistant"
 GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
@@ -315,48 +315,83 @@ class UpdateDialog(QDialog):
         super().closeEvent(event)
 
     def apply_update_and_restart(self, new_exe_temp: str):
-        current_exe = sys.executable
+        current_exe = os.path.abspath(sys.executable)
         current_pid = os.getpid()
         exe_dir = os.path.dirname(current_exe)
 
-        # Clear PyInstaller's _MEIPASS2 environment variable so the newly launched onefile exe extracts properly
-        bat_content = f"""@echo off
-set _MEIPASS2=
-set _MEIPASS=
-timeout /t 1 /nobreak >nul
-:wait_process
-tasklist /fi "PID eq {current_pid}" 2>nul | find "{current_pid}" >nul
-if not errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    goto wait_process
-)
+        curr_escaped = current_exe.replace("'", "''")
+        temp_escaped = new_exe_temp.replace("'", "''")
+        dir_escaped = exe_dir.replace("'", "''")
 
-:try_replace
-del "{current_exe}" >nul 2>&1
-if exist "{current_exe}" (
-    timeout /t 1 /nobreak >nul
-    goto try_replace
-)
+        # Robust PowerShell script that:
+        # 1. Waits for parent PID to exit completely
+        # 2. Replaces exe with retry loop
+        # 3. Purges _MEIPASS environment variables to prevent Python DLL load error
+        # 4. Launches updated exe cleanly and detaches
+        ps1_content = f"""# SeePD BTK Assistant - Updater Script
+$ErrorActionPreference = 'SilentlyContinue'
+$TargetPid = {current_pid}
+$CurrentExe = '{curr_escaped}'
+$NewExeTemp = '{temp_escaped}'
+$ExeDir = '{dir_escaped}'
 
-move /y "{new_exe_temp}" "{current_exe}" >nul
-cd /d "{exe_dir}"
-set _MEIPASS2=
-set _MEIPASS=
-start "" "{current_exe}"
-del "%~f0" >nul 2>&1
+# 1. Wait for current process to completely exit
+try {{
+    $proc = Get-Process -Id $TargetPid -ErrorAction SilentlyContinue
+    if ($proc) {{
+        $proc.WaitForExit(15000)
+    }}
+}} catch {{}}
+
+# Buffer to let Windows release file locks and clean up temp dirs
+Start-Sleep -Seconds 2
+
+# 2. Retry loop for file replacement
+$replaced = $false
+for ($i = 0; $i -lt 15; $i++) {{
+    try {{
+        if (Test-Path -LiteralPath $CurrentExe) {{
+            Remove-Item -LiteralPath $CurrentExe -Force -ErrorAction Stop
+        }}
+        Move-Item -LiteralPath $NewExeTemp -Destination $CurrentExe -Force -ErrorAction Stop
+        $replaced = $true
+        break
+    }} catch {{
+        Start-Sleep -Seconds 1
+    }}
+}}
+
+# 3. Strip PyInstaller environment variables completely
+Remove-Item Env:\\_MEIPASS2 -ErrorAction SilentlyContinue
+Remove-Item Env:\\_MEIPASS -ErrorAction SilentlyContinue
+[System.Environment]::SetEnvironmentVariable('_MEIPASS2', $null, 'Process')
+[System.Environment]::SetEnvironmentVariable('_MEIPASS', $null, 'Process')
+
+# 4. Launch the updated application detached
+if ($replaced -and (Test-Path -LiteralPath $CurrentExe)) {{
+    Start-Process -FilePath $CurrentExe -WorkingDirectory $ExeDir
+}}
+
+# 5. Clean up this script
+Start-Sleep -Seconds 1
+Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 """
-        bat_path = os.path.join(tempfile.gettempdir(), f"seepd_updater_{current_pid}.bat")
-        with open(bat_path, "w", encoding="utf-8") as f:
-            f.write(bat_content)
+        ps1_path = os.path.join(tempfile.gettempdir(), f"seepd_updater_{current_pid}.ps1")
+        with open(ps1_path, "w", encoding="utf-8") as f:
+            f.write(ps1_content)
 
         clean_env = os.environ.copy()
         clean_env.pop("_MEIPASS2", None)
         clean_env.pop("_MEIPASS", None)
 
-        # Launch batch script hidden / independent of python process
+        creation_flags = 0
+        if sys.platform == "win32":
+            creation_flags = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
+
+        # Launch PowerShell script hidden and detached from current process tree
         subprocess.Popen(
-            ["cmd.exe", "/c", bat_path],
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", ps1_path],
             env=clean_env,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            creationflags=creation_flags
         )
         sys.exit(0)
