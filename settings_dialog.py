@@ -1,6 +1,7 @@
 """
 SeeRPG Settings Dialog
-A modern PyQt6 settings window for configuring Hotkeys, API keys, Audio devices, and Outputs.
+A modern, dark-themed PyQt6 settings window for configuring Hotkeys, API keys, Audio devices, and Outputs.
+Styled to match the sleek in-game HUD aesthetic.
 """
 import os
 import sys
@@ -8,12 +9,12 @@ import json
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QComboBox, QCheckBox, QSlider, QSpinBox, QTabWidget, QWidget,
-    QGroupBox, QMessageBox
+    QGroupBox, QMessageBox, QFrame
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent
 from audio_recorder import AudioRecorder
-from icons import get_app_icon
+from icons import get_app_icon, get_app_pixmap
 from updater import APP_VERSION
 
 if getattr(sys, 'frozen', False):
@@ -25,11 +26,13 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 
 DEFAULT_CONFIG = {
     "google_api_key": "",
+    "model_name": "gemini-3.1-flash-lite",
     "hotkey": "f9",
     "hotkey_mode": "toggle", # "hold" (Push-To-Talk) or "toggle" (Push-To-Toggle)
+    "text_hotkey": "f10",
     "audio_device_index": None,
     "enable_clipboard": True,
-    "clipboard_template": "{codes}", # e.g. "{codes}" or "/ticket {id} {fine} {codes}"
+    "clipboard_template": "{codes}",
     "enable_tts": True,
     "tts_volume": 90,
     "tts_rate": 180,
@@ -134,7 +137,7 @@ class HotkeyRecorderButton(QPushButton):
                     border: 2px solid #0284c7;
                     border-radius: 6px;
                     padding: 7px 18px;
-                    font-size: 12px;
+                    font-size: 13px;
                     font-weight: bold;
                     min-width: 170px;
                 }
@@ -222,13 +225,203 @@ class SettingsDialog(QDialog):
         self.btk_service = btk_service
         self.cfg = load_config()
         self.setWindowIcon(get_app_icon())
-        self.setWindowTitle("SeePD BTK Hangasszisztens - Beállítások")
-        self.setFixedSize(540, 580)
+        self.setWindowTitle("SeePD BTK Asszisztens - Beállítások")
+        self.setFixedSize(580, 640)
+        self.apply_theme()
         self.init_ui()
+
+    def apply_theme(self):
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0f1117;
+                color: #f8fafc;
+                font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            }
+            QLabel {
+                color: #f8fafc;
+                font-size: 13px;
+                background: transparent;
+            }
+            QGroupBox {
+                background-color: #161b26;
+                border: 1px solid #283347;
+                border-radius: 10px;
+                margin-top: 14px;
+                padding-top: 18px;
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-bottom: 14px;
+                font-weight: bold;
+                font-size: 13px;
+                color: #38bdf8;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                left: 14px;
+                top: 4px;
+                padding: 0 6px;
+                background-color: #161b26;
+                color: #38bdf8;
+            }
+            QLineEdit {
+                background-color: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #38bdf8;
+                background-color: #0f172a;
+            }
+            QComboBox {
+                background-color: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 13px;
+                min-height: 24px;
+            }
+            QComboBox:focus, QComboBox:hover {
+                border: 1px solid #38bdf8;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 24px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #1e293b;
+                color: #f8fafc;
+                selection-background-color: #2563eb;
+                selection-color: white;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 4px;
+                outline: none;
+            }
+            QCheckBox {
+                color: #f8fafc;
+                font-size: 13px;
+                spacing: 8px;
+                background: transparent;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1px solid #475569;
+                background-color: #1e293b;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #38bdf8;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #2563eb;
+                border-color: #38bdf8;
+            }
+            QSlider::groove:horizontal {
+                height: 6px;
+                background: #1e293b;
+                border-radius: 3px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #2563eb;
+                border-radius: 3px;
+            }
+            QSlider::handle:horizontal {
+                background: #38bdf8;
+                border: 2px solid #ffffff;
+                width: 16px;
+                margin-top: -5px;
+                margin-bottom: -5px;
+                border-radius: 8px;
+            }
+            QSlider::handle:horizontal:hover {
+                background: #60a5fa;
+            }
+            QSpinBox {
+                background-color: #1e293b;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+            }
+            QSpinBox:focus {
+                border: 1px solid #38bdf8;
+            }
+            QTabWidget::pane {
+                border: 1px solid #283347;
+                background-color: #121620;
+                border-radius: 10px;
+                top: -1px;
+                padding: 14px;
+            }
+            QTabBar::tab {
+                background-color: #161b26;
+                color: #94a3b8;
+                padding: 9px 20px;
+                margin-right: 4px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QTabBar::tab:hover {
+                background-color: #1e293b;
+                color: #f8fafc;
+            }
+            QTabBar::tab:selected {
+                background-color: #121620;
+                color: #38bdf8;
+                border-top: 2px solid #38bdf8;
+            }
+        """)
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(15)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(14)
+
+        # Header with Logo & Title
+        header = QFrame(self)
+        header.setStyleSheet("background: transparent; border: none;")
+        header_l = QHBoxLayout(header)
+        header_l.setContentsMargins(4, 0, 4, 0)
+        header_l.setSpacing(12)
+
+        icon_lbl = QLabel(header)
+        icon_lbl.setPixmap(get_app_pixmap(36, 36))
+        header_l.addWidget(icon_lbl)
+
+        title_l = QVBoxLayout()
+        title_l.setSpacing(1)
+        title = QLabel("SeePD BTK Hangasszisztens", header)
+        title.setStyleSheet("font-size: 17px; font-weight: bold; color: #f8fafc;")
+        title_l.addWidget(title)
+
+        subtitle = QLabel("Hang- és szöveges szabálysértés-elemző FiveM / SeeRPG járőröknek", header)
+        subtitle.setStyleSheet("font-size: 11px; color: #64748b;")
+        title_l.addWidget(subtitle)
+        header_l.addLayout(title_l)
+
+        header_l.addStretch()
+
+        ver_badge = QLabel(f"v{APP_VERSION}", header)
+        ver_badge.setStyleSheet("""
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 12px;
+        """)
+        header_l.addWidget(ver_badge)
+
+        layout.addWidget(header)
 
         tabs = QTabWidget(self)
 
@@ -239,14 +432,14 @@ class SettingsDialog(QDialog):
 
         api_group = QGroupBox("Google Gemini API (Ingyenes)", tab_ai)
         api_layout = QVBoxLayout(api_group)
-        api_layout.setSpacing(8)
+        api_layout.setSpacing(10)
 
         lbl_info = QLabel(
             "A Google AI Studio teljesen ingyenes API kulcsot biztosít,\n"
-            "amivel közvetlenül elemezhető a magyar mikrofon-hang.",
+            "amivel közvetlenül és azonnal elemezhető a járőri hang/szöveg.",
             api_group
         )
-        lbl_info.setStyleSheet("color: #64748b; font-size: 11px;")
+        lbl_info.setStyleSheet("color: #94a3b8; font-size: 12px; line-height: 1.4;")
         api_layout.addWidget(lbl_info)
 
         self.input_api_key = QLineEdit(api_group)
@@ -276,20 +469,37 @@ class SettingsDialog(QDialog):
         model_row.addWidget(self.combo_model)
         api_layout.addLayout(model_row)
 
-        btn_key_link = QPushButton("Ingyenes API Kulcs kérése (aistudio.google.com)", api_group)
-        btn_key_link.setStyleSheet("text-align: left; color: #2563eb; background: none; border: none; font-size: 11px; text-decoration: underline;")
+        btn_key_link = QPushButton("Ingyenes API Kulcs kérése (aistudio.google.com) ↗", api_group)
+        btn_key_link.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_key_link.setStyleSheet("""
+            QPushButton {
+                text-align: left;
+                color: #38bdf8;
+                background: none;
+                border: none;
+                font-size: 11px;
+                font-weight: 500;
+                text-decoration: underline;
+                padding: 0;
+            }
+            QPushButton:hover {
+                color: #60a5fa;
+            }
+        """)
         btn_key_link.clicked.connect(self._open_ai_studio)
         api_layout.addWidget(btn_key_link)
 
         ai_layout.addWidget(api_group)
+        ai_layout.addStretch()
 
-        # Tab 2: Gyorsbillentyű & Mikrofon
+        # Tab 2: Gyorsbillentyűk & Bemenet
         tab_input = QWidget()
         input_layout = QVBoxLayout(tab_input)
         input_layout.setSpacing(12)
 
         hotkey_group = QGroupBox("Gyorsbillentyűk (Hotkey)", tab_input)
         hk_layout = QVBoxLayout(hotkey_group)
+        hk_layout.setSpacing(10)
 
         hk_row = QHBoxLayout()
         hk_row.addWidget(QLabel("Hangrögzítés gombja (Voice):", hotkey_group))
@@ -317,14 +527,14 @@ class SettingsDialog(QDialog):
         hk_text_row.addStretch()
         hk_layout.addLayout(hk_text_row)
 
-        lbl_hint = QLabel("Tipp: Kattints a gombra, majd nyomd le a kívánt billentyűt a billentyűzeten.\nMégsem szeretnéd megváltoztatni? Nyomd meg az ESC billentyűt.", hotkey_group)
+        lbl_hint = QLabel("Tipp: Kattints bármelyik gombra, majd nyomd le a kívánt billentyűt a rögzítéshez (ESC: mégse).", hotkey_group)
         lbl_hint.setStyleSheet("color: #64748b; font-size: 11px; margin-top: 4px;")
         hk_layout.addWidget(lbl_hint)
 
         input_layout.addWidget(hotkey_group)
 
         # Mikrofon választó
-        mic_group = QGroupBox("Mikrofon", tab_input)
+        mic_group = QGroupBox("Mikrofon Kiválasztása", tab_input)
         mic_layout = QVBoxLayout(mic_group)
         self.combo_mics = QComboBox(mic_group)
         self.combo_mics.addItem("Alapértelmezett rendszer mikrofon", None)
@@ -336,6 +546,7 @@ class SettingsDialog(QDialog):
                 self.combo_mics.setCurrentIndex(self.combo_mics.count() - 1)
         mic_layout.addWidget(self.combo_mics)
         input_layout.addWidget(mic_group)
+        input_layout.addStretch()
 
         # Tab 3: Kimenetek (Vágólap, Hang, Overlay)
         tab_output = QWidget()
@@ -343,14 +554,17 @@ class SettingsDialog(QDialog):
         out_layout.setSpacing(12)
 
         # Clipboard
-        self.chk_clip = QCheckBox("Automatikus másolás a vágólapra (Ctrl+V)", tab_output)
+        clip_group = QGroupBox("Vágólap (Gyorsmásolás)", tab_output)
+        clip_l = QVBoxLayout(clip_group)
+        self.chk_clip = QCheckBox("Automatikus másolás a vágólapra (Ctrl+V a játékban)", clip_group)
         self.chk_clip.setChecked(self.cfg.get("enable_clipboard", True))
-        out_layout.addWidget(self.chk_clip)
+        clip_l.addWidget(self.chk_clip)
+        out_layout.addWidget(clip_group)
 
         # TTS
-        tts_group = QGroupBox("Hangos visszajelzés (TTS fülhallgatóba)", tab_output)
+        tts_group = QGroupBox("Hangos Visszajelzés (TTS fülhallgatóba)", tab_output)
         tts_l = QVBoxLayout(tts_group)
-        self.chk_tts = QCheckBox("Hangos bemondás bekapcsolása", tts_group)
+        self.chk_tts = QCheckBox("Hangos összegzés bemondása fülhallgatóba", tts_group)
         self.chk_tts.setChecked(self.cfg.get("enable_tts", True))
         tts_l.addWidget(self.chk_tts)
 
@@ -360,34 +574,43 @@ class SettingsDialog(QDialog):
         self.slider_vol.setRange(0, 100)
         self.slider_vol.setValue(int(self.cfg.get("tts_volume", 90)))
         vol_row.addWidget(self.slider_vol)
+
+        self.lbl_vol_val = QLabel(f"{int(self.cfg.get('tts_volume', 90))}%", tts_group)
+        self.lbl_vol_val.setFixedWidth(40)
+        self.lbl_vol_val.setStyleSheet("color: #38bdf8; font-weight: bold;")
+        self.slider_vol.valueChanged.connect(lambda v: self.lbl_vol_val.setText(f"{v}%"))
+        vol_row.addWidget(self.lbl_vol_val)
         tts_l.addLayout(vol_row)
         out_layout.addWidget(tts_group)
 
         # HUD Overlay
-        overlay_group = QGroupBox("Képernyő Overlay (HUD)", tab_output)
+        overlay_group = QGroupBox("Képernyő Overlay (In-Game HUD)", tab_output)
         ov_l = QVBoxLayout(overlay_group)
-        self.chk_overlay = QCheckBox("Lebegő HUD ablak megjelenítése a játék felett", overlay_group)
+        self.chk_overlay = QCheckBox("Lebegő átlátszó HUD megjelenítése a játék felett", overlay_group)
         self.chk_overlay.setChecked(self.cfg.get("enable_overlay", True))
         ov_l.addWidget(self.chk_overlay)
 
         dur_row = QHBoxLayout()
-        dur_row.addWidget(QLabel("Automatikus eltűnés (másodperc):", overlay_group))
+        dur_row.addWidget(QLabel("Automatikus eltűnés időtartama:", overlay_group))
         self.spin_dur = QSpinBox(overlay_group)
         self.spin_dur.setRange(3, 60)
+        self.spin_dur.setSuffix(" mp")
         self.spin_dur.setValue(int(self.cfg.get("overlay_duration_sec", 10)))
         dur_row.addWidget(self.spin_dur)
+        dur_row.addStretch()
         ov_l.addLayout(dur_row)
         out_layout.addWidget(overlay_group)
+        out_layout.addStretch()
 
         # Tab 4: BTK & Enyhítés
         tab_btk = QWidget()
         btk_l = QVBoxLayout(tab_btk)
         btk_l.setSpacing(12)
 
-        ease_group = QGroupBox("Enyhítés mértéke (Rendfokozat alapján)", tab_btk)
+        ease_group = QGroupBox("Enyhítés Mértéke (Rendfokozat alapján)", tab_btk)
         ease_l = QVBoxLayout(ease_group)
         self.combo_ease = QComboBox(ease_group)
-        self.combo_ease.addItem("0% - Nincs enyhítés", 0)
+        self.combo_ease.addItem("0% - Nincs enyhítés (Alapértelmezett)", 0)
         self.combo_ease.addItem("10% - Őrmester / Deputy I (max 10%)", 10)
         self.combo_ease.addItem("30% - Zászlós / Sr. Deputy I (max 30%)", 30)
         self.combo_ease.addItem("60% - Hadnagy / Sergeant (max 60%)", 60)
@@ -401,33 +624,71 @@ class SettingsDialog(QDialog):
         ease_l.addWidget(self.combo_ease)
         btk_l.addWidget(ease_group)
 
-        btn_refresh_btk = QPushButton("SeePD BTK adatbázis azonnali újraszinkronizálása", tab_btk)
-        btn_refresh_btk.clicked.connect(self._sync_btk)
-        btk_l.addWidget(btn_refresh_btk)
+        sync_group = QGroupBox("Élő SeePD BTK Szinkronizáció", tab_btk)
+        sync_l = QVBoxLayout(sync_group)
+        sync_l.setSpacing(8)
 
-        lbl_btk_stat = QLabel(f"Jelenleg tárolt tételek száma: {len(self.btk_service.points)} db", tab_btk)
+        btn_refresh_btk = QPushButton("BTK Adatbázis azonnali frissítése (btkapi.seepd.hu)", sync_group)
+        btn_refresh_btk.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_refresh_btk.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #38bdf8;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 9px 16px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #2563eb;
+                color: white;
+                border-color: #2563eb;
+            }
+        """)
+        btn_refresh_btk.clicked.connect(self._sync_btk)
+        sync_l.addWidget(btn_refresh_btk)
+
+        lbl_btk_stat = QLabel(f"Jelenleg tárolt tételek száma: {len(self.btk_service.points)} db", sync_group)
         lbl_btk_stat.setStyleSheet("color: #64748b; font-size: 11px;")
-        btk_l.addWidget(lbl_btk_stat)
+        sync_l.addWidget(lbl_btk_stat)
         self.lbl_btk_stat = lbl_btk_stat
+        btk_l.addWidget(sync_group)
 
         btk_l.addStretch()
 
-        tabs.addTab(tab_ai, "AI Kulcs")
-        tabs.addTab(tab_input, "Gomb & Mikrofon")
-        tabs.addTab(tab_output, "Kimenetek")
+        tabs.addTab(tab_ai, "AI Modell")
+        tabs.addTab(tab_input, "Gombok & Hang")
+        tabs.addTab(tab_output, "Kimenetek & HUD")
         tabs.addTab(tab_btk, "BTK Szabályok")
 
         layout.addWidget(tabs)
 
         # Buttons footer
         btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(4, 0, 4, 0)
 
         lbl_ver = QLabel(f"v{APP_VERSION}", self)
         lbl_ver.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold;")
         btn_layout.addWidget(lbl_ver)
 
         btn_chk_update = QPushButton("Frissítés keresése", self)
-        btn_chk_update.setStyleSheet("font-size: 11px; padding: 4px 10px; background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;")
+        btn_chk_update.setStyleSheet("""
+            QPushButton {
+                font-size: 11px;
+                padding: 5px 12px;
+                background-color: #1e293b;
+                color: #cbd5e1;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                color: #38bdf8;
+                border-color: #475569;
+            }
+        """)
         btn_chk_update.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_chk_update.clicked.connect(self._manual_check_update)
         btn_layout.addWidget(btn_chk_update)
@@ -435,11 +696,41 @@ class SettingsDialog(QDialog):
         btn_layout.addStretch()
 
         btn_cancel = QPushButton("Mégse", self)
+        btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #cbd5e1;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 7px 18px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                color: white;
+            }
+        """)
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
 
         btn_save = QPushButton("Mentés és Alkalmazás", self)
-        btn_save.setStyleSheet("background-color: #2563eb; color: white; font-weight: bold; padding: 6px 14px; border-radius: 4px;")
+        btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_save.setStyleSheet("""
+            QPushButton {
+                background-color: #2563eb;
+                color: white;
+                font-weight: bold;
+                padding: 7px 22px;
+                border-radius: 6px;
+                border: none;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #1d4ed8;
+            }
+        """)
         btn_save.clicked.connect(self.save)
         btn_layout.addWidget(btn_save)
 
@@ -455,7 +746,7 @@ class SettingsDialog(QDialog):
             dlg = UpdateDialog(info, self)
             dlg.exec()
         else:
-            QMessageBox.information(self, "Naprakész", f"A legfrissebb verziót használod ({info.get('current_version', 'v1.0.6')})!")
+            QMessageBox.information(self, "Naprakész", f"A legfrissebb verziót használod ({info.get('current_version', f'v{APP_VERSION}')})!")
 
     def _open_ai_studio(self):
         import webbrowser

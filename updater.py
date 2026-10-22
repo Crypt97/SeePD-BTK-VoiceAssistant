@@ -23,7 +23,7 @@ from icons import get_app_icon, get_app_pixmap
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 GITHUB_REPO = "Crypt97/SeePD-BTK-VoiceAssistant"
 GITHUB_RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
